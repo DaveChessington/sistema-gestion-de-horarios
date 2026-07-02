@@ -15,6 +15,8 @@ def create_app(config_class=Config):
 
     # Crear tablas en el primer contexto (solo para facilitar pruebas, en prod se usaría Flask-Migrate)
     with app.app_context():
+        from app.models.plantel import Plantel
+        from app.models.usuario import Usuario
         db.create_all()
 
     return app

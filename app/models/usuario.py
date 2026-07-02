@@ -1,5 +1,22 @@
+import enum
 from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
+
+class RolUsuario(str,enum.Enum):
+    COORDINADOR = "COORDINADOR"
+    ADMIN_PLANTEL = "ADMIN_PLANTEL"
+    DOCENTE = "DOCENTE"
+    ALUMNO = "ALUMNO"
+
+    @property
+    def prioridad(self):
+        """Devuelve el peso jerárquico del rol para resolver conflictos de horarios."""
+        prioridades = {
+            self.COORDINADOR: 4,
+            self.ADMIN_PLANTEL: 3,
+            self.DOCENTE: 2,
+        }
+        return prioridades.get(self, 0)
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
@@ -9,7 +26,10 @@ class Usuario(db.Model):
     apellido = db.Column(db.String(100), nullable=False)
     correo = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    rol = db.Column(db.String(50), nullable=False) # COORDINADOR, ADMIN_PLANTEL, DOCENTE, ALUMNO
+    
+    # Campo rol usando el tipo Enum nativo de SQLAlchemy y Python
+    rol = db.Column(db.Enum(RolUsuario), nullable=False)
+    
     activo = db.Column(db.Boolean, default=True, nullable=False)
     
     # Llave foránea hacia planteles
@@ -30,10 +50,11 @@ class Usuario(db.Model):
             'nombre': self.nombre,
             'apellido': self.apellido,
             'correo': self.correo,
-            'rol': self.rol,
+            'rol': self.rol.value if self.rol else None,
+            'prioridad': self.rol.prioridad if self.rol else 0,
             'activo': self.activo,
             'id_plantel_asignado': self.id_plantel_asignado
         }
 
     def __repr__(self):
-        return f'<Usuario {self.correo} ({self.rol})>'
+        return f'<Usuario {self.correo} ({self.rol.name if self.rol else "Sin Rol"})>'

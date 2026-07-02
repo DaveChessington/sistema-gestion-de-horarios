@@ -53,5 +53,5 @@ def role_required(*roles):
                 return jsonify({'error': 'No tienes permisos suficientes para acceder a este recurso'}), 403
                 
             return f(*args, **kwargs)
-        return decorator
+        return decorated
     return decorator
