@@ -2,6 +2,7 @@ from app.extensions import db
 
 class Programa(db.Model):
     __tablename__ = 'programas'
+    __table_args__ = {'schema': 'catalogos'}
 
     id_programa = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)

@@ -1,6 +1,7 @@
 from flask import Flask
 from config import Config
 from app.extensions import db
+from sqlalchemy import text
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -22,6 +23,15 @@ def create_app(config_class=Config):
         from app.models.equipo import Equipo
         from app.models.programa import Programa
         
+        # Si es SQLite (pruebas), removemos el esquema para evitar errores de SQLite en memoria
+        if db.engine.url.drivername == 'sqlite':
+            for table in db.metadata.tables.values():
+                table.schema = None
+        else:
+            # Crear el esquema si no existe en PostgreSQL
+            db.session.execute(text("CREATE SCHEMA IF NOT EXISTS catalogos;"))
+            db.session.commit()
+            
         db.create_all()
 
     return app

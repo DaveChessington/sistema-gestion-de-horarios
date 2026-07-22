@@ -2,12 +2,13 @@ from app.extensions import db
 
 class Salon(db.Model):
     __tablename__ = 'salones'
+    __table_args__ = {'schema': 'catalogos'}
 
     id_salon = db.Column(db.Integer, primary_key=True)
     numero = db.Column(db.String(50), nullable=False)
     descripcion = db.Column(db.String(255), nullable=True)
     capacidad = db.Column(db.Integer, nullable=False)
-    id_plantel = db.Column(db.Integer, db.ForeignKey('planteles.id'), nullable=False)
+    id_plantel = db.Column(db.Integer, db.ForeignKey('catalogos.planteles.id'), nullable=False)
     activo = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relación uno a muchos con equipos

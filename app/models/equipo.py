@@ -3,12 +3,13 @@ from app.models.software import software_asociacion
 
 class Equipo(db.Model):
     __tablename__ = 'equipos'
+    __table_args__ = {'schema': 'catalogos'}
 
     id_equipo = db.Column(db.Integer, primary_key=True)
     numero = db.Column(db.String(100), unique=True, nullable=False, index=True)  # Número de inventario único
     descripcion = db.Column(db.String(255), nullable=True)
     activo = db.Column(db.Boolean, default=True, nullable=False)
-    id_salon = db.Column(db.Integer, db.ForeignKey('salones.id_salon'), nullable=True)
+    id_salon = db.Column(db.Integer, db.ForeignKey('catalogos.salones.id_salon'), nullable=True)
 
     # Relación muchos a muchos con programas (software)
     programas = db.relationship(
