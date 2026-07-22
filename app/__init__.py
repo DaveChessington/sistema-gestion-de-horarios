@@ -1,22 +1,21 @@
 from flask import Flask
-from config import Config
-from app.extensions import db
 
-def create_app(config_class=Config):
+
+def create_app(config_object=None):
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    if config_object is None:
+        from config import Config
 
-    # Inicializar extensiones
+        app.config.from_object(Config)
+    else:
+        app.config.from_object(config_object)
+
+    from app.extensions import db
+
     db.init_app(app)
 
-    # Registrar blueprints
     from app.routes.auth_routes import auth_bp
-    app.register_blueprint(auth_bp)
 
-    # Crear tablas en el primer contexto (solo para facilitar pruebas, en prod se usaría Flask-Migrate)
-    with app.app_context():
-        from app.models.plantel import Plantel
-        from app.models.usuario import Usuario
-        db.create_all()
+    app.register_blueprint(auth_bp)
 
     return app

@@ -1,55 +1,30 @@
-from flask import Blueprint, request, jsonify
-from app.services.auth_service import AuthService
+from flask import Blueprint, jsonify
 from app.utils.security import login_required, role_required
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
-@auth_bp.route('/register', methods=['POST'])
-def register():
-    """Ruta para registrar nuevos usuarios."""
-    datos = request.get_json()
-    if not datos:
-        return jsonify({'error': 'No se enviaron datos en la petición'}), 400
-        
-    resultado = AuthService.register_user(datos)
-    if not resultado['success']:
-        return jsonify({'error': resultado['error']}), resultado['status_code']
-        
-    return jsonify({'mensaje': 'Usuario registrado exitosamente', 'usuario': resultado['data']}), resultado['status_code']
+auth_bp = Blueprint('auth', __name__)
 
-@auth_bp.route('/login', methods=['POST'])
-def login():
-    """Ruta para autenticar usuarios y obtener token."""
-    datos = request.get_json()
-    if not datos or 'correo' not in datos or 'password' not in datos:
-        return jsonify({'error': 'Se requiere correo y password'}), 400
-        
-    resultado = AuthService.login(datos['correo'], datos['password'])
-    if not resultado['success']:
-        return jsonify({'error': resultado['error']}), resultado['status_code']
-        
-    return jsonify({
-        'mensaje': 'Login exitoso', 
-        'token': resultado['token'],
-        'usuario': resultado['usuario']
-    }), resultado['status_code']
 
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'}), 200
+
+
+@auth_bp.route('/protected', methods=['GET'])
 @login_required
-def get_me(current_user_payload):
-    """Ruta protegida para obtener los datos del usuario logueado usando el token."""
-    return jsonify({
-        'mensaje': 'Token válido',
-        'usuario': current_user_payload
-    }), 200
+def protected(current_user_payload):
+    return jsonify({'message': 'Protected route', 'user': current_user_payload}), 200
 
-# Ejemplo de ruta protegida por rol (solo para probar RBAC)
-@auth_bp.route('/admin-solo', methods=['GET'])
+
+@auth_bp.route('/admin-only', methods=['GET'])
 @login_required
 @role_required('COORDINADOR', 'ADMIN_PLANTEL')
 def admin_only(current_user_payload):
-    """Ruta de prueba protegida por roles altos."""
-    return jsonify({
-        'mensaje': 'Tienes acceso a la zona de administración',
-        'plantel': current_user_payload.get('id_plantel_asignado')
-    }), 200
+    return jsonify({'message': 'Admin only route'}), 200
+
+
+@auth_bp.route('/docente-only', methods=['GET'])
+@login_required
+@role_required('DOCENTE')
+def docente_only(current_user_payload):
+    return jsonify({'message': 'Docente only route'}), 200

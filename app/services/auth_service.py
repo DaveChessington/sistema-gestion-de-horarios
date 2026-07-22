@@ -1,63 +1,81 @@
 from app.extensions import db
-from app.models.usuario import Usuario
-from app.utils.security import generate_token
+from app.models.usuario import Usuario, RolUsuario
+
 
 class AuthService:
-    
     @staticmethod
-    def register_user(datos):
-        """Registra un nuevo usuario aplicando las reglas de negocio."""
-        required_fields = ['nombre', 'apellido', 'correo', 'password', 'rol']
+    def register_user(data):
+        required_fields = ['nombre', 'correo', 'password', 'rol']
         for field in required_fields:
-            if field not in datos:
-                return {'success': False, 'error': f'Falta el campo obligatorio: {field}', 'status_code': 400}
-        
-        # Validar si el correo ya existe
-        if Usuario.query.filter_by(correo=datos['correo']).first():
-            return {'success': False, 'error': 'El correo ya está registrado', 'status_code': 409}
-            
-        # Validar rol
-        roles_permitidos = ['COORDINADOR', 'ADMIN_PLANTEL', 'DOCENTE', 'ALUMNO']
-        if datos['rol'] not in roles_permitidos:
-            return {'success': False, 'error': 'Rol inválido', 'status_code': 400}
-            
-        # Crear usuario
-        nuevo_usuario = Usuario(
-            nombre=datos['nombre'],
-            apellido=datos['apellido'],
-            correo=datos['correo'],
-            rol=datos['rol'],
-            id_plantel_asignado=datos.get('id_plantel_asignado')
+            if field not in data or data[field] in [None, '']:
+                return {
+                    'success': False,
+                    'status_code': 400,
+                    'error': f'Campo {field} es obligatorio'
+                }
+
+        existing_user = Usuario.query.filter_by(correo=data['correo']).first()
+        if existing_user is not None:
+            return {
+                'success': False,
+                'status_code': 409,
+                'error': 'Correo ya registrado'
+            }
+
+        if data['rol'] not in {rol.value for rol in RolUsuario}:
+            return {
+                'success': False,
+                'status_code': 400,
+                'error': 'Rol inválido'
+            }
+
+        usuario = Usuario(
+            nombre=data['nombre'],
+            apellido=data.get('apellido', ''),
+            correo=data['correo'],
+            rol=RolUsuario(data['rol']),
+            activo=True,
+            id_plantel_asignado=data.get('id_plantel_asignado')
         )
-        # RF-01: Cifrado de Credenciales
-        nuevo_usuario.set_password(datos['password'])
-        
-        try:
-            db.session.add(nuevo_usuario)
-            db.session.commit()
-            return {'success': True, 'data': nuevo_usuario.to_dict(), 'status_code': 201}
-        except Exception as e:
-            db.session.rollback()
-            return {'success': False, 'error': 'Error interno al guardar en la base de datos', 'status_code': 500}
+        usuario.set_password(data['password'])
+        db.session.add(usuario)
+        db.session.commit()
+
+        return {
+            'success': True,
+            'status_code': 201,
+            'data': usuario.to_dict()
+        }
 
     @staticmethod
     def login(correo, password):
-        """Verifica credenciales y retorna un token en caso de éxito."""
+        if not correo or not password:
+            return {
+                'success': False,
+                'status_code': 401,
+                'error': 'Credenciales inválidas'
+            }
+
         usuario = Usuario.query.filter_by(correo=correo).first()
-        
-        # Validar existencia de usuario y contraseña
         if not usuario or not usuario.check_password(password):
-            return {'success': False, 'error': 'Credenciales inválidas', 'status_code': 401}
-            
-        # Validar que el usuario esté activo
+            return {
+                'success': False,
+                'status_code': 401,
+                'error': 'Credenciales inválidas'
+            }
+
         if not usuario.activo:
-            return {'success': False, 'error': 'Cuenta de usuario inactiva', 'status_code': 403}
-            
-        # Generar token
-        token = generate_token(usuario)
+            return {
+                'success': False,
+                'status_code': 401,
+                'error': 'Usuario inactivo'
+            }
+
+        from app.utils.security import generate_token
+
         return {
-            'success': True, 
-            'token': token, 
-            'usuario': usuario.to_dict(), 
-            'status_code': 200
+            'success': True,
+            'status_code': 200,
+            'token': generate_token(usuario),
+            'usuario': usuario.to_dict()
         }
