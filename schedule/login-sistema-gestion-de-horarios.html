@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSpaces - Gestión de Salas (Flask + Jinja2 + Async JS)</title>
+    
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        brand: {
+                            900: '#0F172A',
+                            800: '#1E40AF',
+                            600: '#2563EB',
+                            50: '#EFF6FF',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        .animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-pulse-subtle { animation: pulseSubtle 1.5s infinite ease-in-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseSubtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased min-h-screen flex flex-col">
+
+    <!-- Flask REST API Status Badge Topbar -->
+    <div class="bg-slate-950 text-slate-300 text-[11px] px-4 py-1.5 flex items-center justify-between border-b border-slate-800 font-mono">
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Flask Backend Activo
+            </span>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-400">Jinja2 Template Engine</span>
+            <span class="text-slate-600">|</span>
+            <span class="text-blue-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> Actualización Asíncrona (Fetch API / AJAX)</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="openJinjaInspectorModal()" class="text-xs text-amber-400 hover:text-amber-300 underline flex items-center gap-1 font-bold">
+                <i class="fa-solid fa-code"></i> Ver Código Flask / Jinja2
+            </button>
+            <span id="asyncLogCounter" class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">0 Peticiones Asíncronas</span>
+        </div>
+    </div>
+
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg">
+        <div class="px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
+            
+            <!-- Logo & Brand Info -->
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMobileSidebar()" class="lg:hidden text-slate-300 hover:text-white p-2">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div class="bg-blue-600 p-2 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-desktop text-lg"></i>
+                </div>
+                <div>
+                    <!-- Jinja2 Variable Interpolation Example: {{ titulo }} -->
+                    <span class="font-extrabold text-lg tracking-tight block leading-none">EduSpaces</span>
+                    <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">Centro de Cómputo • Flask + Jinja2 + Async JS</span>
+                </div>
+            </div>
+
+            <!-- Global Fuzzy Search Trigger (Async HTTP query) -->
+            <div class="flex-1 max-w-xl mx-4 hidden md:block">
+                <button onclick="openSearchModal()" class="w-full bg-slate-800/80 hover:bg-slate-800 text-slate-400 border border-slate-700/60 rounded-xl px-4 py-2 text-xs flex items-center justify-between transition-all hover:border-slate-600">
+                    <span class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-magnifying-glass text-blue-400"></i>
+                        <span>Búsqueda asíncrona: materia, profesor, grupo (ej: ICO 901-9)...</span>
+                    </span>
+                    <kbd class="bg-slate-900 text-slate-400 text-[10px] px-2 py-0.5 rounded-md border border-slate-700 font-mono">Ctrl + K</kbd>
+                </button>
+            </div>
+
+            <!-- Main View Mode Switcher -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 flex items-center gap-1">
+                    <button onclick="switchView('publica')" id="btnViewPublica" class="view-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Vista Pública</span>
+                        <span class="text-[10px] bg-blue-800 px-1.5 py-0.2 rounded font-normal hidden lg:inline">Consulta</span>
+                    </button>
+                    <button onclick="switchView('admin')" id="btnViewAdmin" class="view-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-300 hover:text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Vista Admin</span>
+                        <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.2 rounded font-normal hidden lg:inline">Gestión</span>
+                    </button>
+                </div>
+
+                <!-- User Profile badge & Interactive Login / Role Selector -->
+                <div class="relative group border-l border-slate-800 pl-2">
+                    <button onclick="openLoginModal()" title="Hacer clic para cambiar de usuario o iniciar sesión" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-800 transition-colors text-left border border-transparent hover:border-slate-700">
+                        <img id="userAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-8 h-8 rounded-full border border-slate-700 object-cover">
+                        <div class="hidden xl:block">
+                            <!-- Jinja2 expression rendered: {{ usuario_actual.nombre }} -->
+                            <span id="userName" class="text-xs font-bold block text-white leading-tight">Sofía Martínez</span>
+                            <span id="userBadge" class="text-[10px] text-blue-400 block font-mono">Consulta Pública</span>
+                        </div>
+                        <i class="fa-solid fa-arrows-rotate text-[11px] text-slate-400 ml-1 hidden xl:inline"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between hidden lg:flex shrink-0 transition-all z-30">
+            <div class="p-4 space-y-6">
+                
+                <div id="sidebarHeaderCard" class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                    <span id="sidebarRoleTag" class="text-[10px] font-bold uppercase tracking-wider text-blue-700 block font-mono">Consulta Pública</span>
+                    <h3 id="sidebarRoleTitle" class="text-xs font-bold text-slate-800 mt-0.5">Calendario Asíncrono</h3>
+                    <p id="sidebarRoleDesc" class="text-[11px] text-slate-500 mt-1">Sin recarga de página. Peticiones HTTP Fetch a Flask en segundo plano.</p>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2 font-mono">Navegación</div>
+                    <nav id="sidebarNav" class="space-y-1">
+                        <!-- Dynamic nav links -->
+                    </nav>
+                </div>
+
+                <!-- Real-time Flask API Stats widget -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                        <span>Estado de API Flask</span>
+                        <span class="inline-flex items-center gap-1 text-emerald-600 font-bold text-[11px]">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> 200 OK
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-slate-500 space-y-1 font-mono border-t border-slate-200/80 pt-2">
+                        <div class="flex justify-between"><span>Total Labs:</span> <strong class="text-slate-800">4 Salas</strong></div>
+                        <div class="flex justify-between"><span>Capacidad PCs:</span> <strong class="text-slate-800">113 PCs</strong></div>
+                        <div class="flex justify-between"><span>Latencia AJAX:</span> <strong id="ajaxLatency" class="text-blue-600 font-bold">~18 ms</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-200 text-xs text-slate-400 flex items-center justify-between">
+                <span class="font-mono text-[11px]">Flask v3.0 + Jinja2</span>
+                <button onclick="openJinjaInspectorModal()" class="text-blue-600 hover:underline text-[11px] font-semibold">
+                    <i class="fa-solid fa-code"></i> Ver Jinja
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Viewport -->
+        <main class="flex-1 flex flex-col overflow-y-auto bg-slate-50">
+            
+            <!-- Breadcrumbs & Async Paradigm Controls -->
+            <div class="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20 shadow-sm">
+                <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                    <i class="fa-solid fa-house text-slate-400"></i>
+                    <span>/</span>
+                    <span id="breadcrumbRole" class="text-slate-700 font-semibold">Vista Pública</span>
+                    <span>/</span>
+                    <span id="breadcrumbView" class="text-blue-600 font-bold">Calendario de Horarios Asíncrono</span>
+                </div>
+
+                <!-- Async Schedule Structure Controls -->
+                <div id="paradigmSelector" class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <span class="text-[11px] text-slate-500 font-bold px-2">Estructura:</span>
+                    <button onclick="setParadigm('matriz')" id="pBtnMatriz" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all">Matriz</button>
+                    <button onclick="setParadigm('timeline')" id="pBtnTimeline" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 transition-all">Timeline</button>
+                    <button onclick="setParadigm('cards')" id="pBtnCards" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 transition-all">Cards</button>
+                </div>
+            </div>
+
+            <!-- Viewport Content Container where renderMainCanvas() renders content -->
+            <div id="viewContent" class="p-6 space-y-6 flex-1">
+                <!-- Dynamically populated via fetchScheduleAsync() and renderMainCanvas() -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Global Search Modal (Ctrl + K) -->
+    <div id="searchModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-start justify-center pt-20 p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-fade-in flex flex-col">
+            <div class="p-4 border-b border-slate-200 flex items-center gap-3 bg-slate-50">
+                <i class="fa-solid fa-magnifying-glass text-blue-600"></i>
+                <input type="text" id="globalSearchInput" oninput="handleAsyncGlobalSearch(this.value)" placeholder="Buscar por materia, profesor o grupo..." class="w-full bg-transparent text-sm font-medium outline-none text-slate-800 placeholder-slate-400">
+                <span id="searchSpinner" class="hidden text-blue-600"><i class="fa-solid fa-circle-notch animate-spin"></i></span>
+                <button onclick="closeSearchModal()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded-md font-mono">ESC</button>
+            </div>
+            <div id="searchResultsList" class="p-4 max-h-80 overflow-y-auto space-y-2">
+                <div class="text-xs text-slate-400 italic text-center p-3">Escribe 2 o más caracteres para buscar de forma asíncrona...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conflict Resolution Modal -->
+    <div id="conflictModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-fade-in">
+            <div class="bg-purple-900 text-white p-5 flex justify-between items-center">
+                <div class="flex items-center gap-2 font-bold text-sm">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    <span>Motor de Detección de Conflictos Flask</span>
+                </div>
+                <button onclick="closeConflictModal()" class="text-purple-200 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-4 text-xs">
+                <p class="text-slate-600">Se detectó un empalme de horarios en <strong>Lab Cómputo 3</strong> los Jueves a las 11:00 AM entre:</p>
+                <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl space-y-1 font-mono">
+                    <div class="font-bold text-purple-900">• ICO 901-9: Sistemas Operativos</div>
+                    <div class="font-bold text-purple-900">• IIA 1221-16: Redes de Computadoras</div>
+                </div>
+                <p class="text-slate-600">El motor recomienda reasignar automáticamente <strong>IIA 1221-16</strong> a <strong>Lab Cómputo 1</strong> (Disponible).</p>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeConflictModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-xl font-bold text-xs">Cancelar</button>
+                <button onclick="executeAsyncConflictResolution()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-md">Resolver Vía AJAX</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jinja Inspector Modal -->
+    <div id="jinjaInspectorModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-slate-900 text-slate-100 rounded-2xl shadow-2xl border border-slate-800 w-full max-w-3xl overflow-hidden animate-fade-in mx-4 flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+                <div class="flex items-center gap-2 text-amber-400 font-mono font-bold text-xs">
+                    <i class="fa-solid fa-code text-sm"></i>
+                    <span>Inspección de Plantilla Jinja2 y Endpoints Flask</span>
+                </div>
+                <button onclick="closeJinjaInspectorModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 font-mono text-xs">
+                <div>
+                    <span class="text-slate-400 text-[11px] block mb-1">1. Renderizado Servidor con Jinja2 (templates/index.html):</span>
+                    <pre class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-emerald-400 overflow-x-auto">
+&lt;!-- Buque principal de salas en Jinja2 --&gt;
+{% for sala in salas_list %}
+  &lt;div class="sala-card"&gt;
+    &lt;h4&gt;{{ sala.nombre }}&lt;/h4&gt;
+    &lt;p&gt;Capacidad: {{ sala.capacidad }} PCs&lt;/p&gt;
+    &lt;span class="badge"&gt;{{ sala.estado|upper }}&lt;/span&gt;
+  &lt;/div&gt;
+{% endfor %}</pre>
+                </div>
+
+                <div>
+                    <span class="text-slate-400 text-[11px] block mb-1">2. Petición Asíncrona cliente JavaScript (Fetch API):</span>
+                    <pre class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-blue-300 overflow-x-auto">
+// Actualizar calendario de forma asíncrona sin recargar la página
+async function fetchScheduleAsync(filters = {}) {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`/api/v1/horarios?${params.toString()}`);
+    const json = await response.json();
+    renderCalendarDOM(json.data); // Actualiza solo el contenedor del calendario
+}</pre>
+                </div>
+
+                <div>
+                    <span class="text-slate-400 text-[11px] block mb-1">3. Ruta Flask de respuesta JSON (app.py):</span>
+                    <pre class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-purple-300 overflow-x-auto">
+@app.route('/api/v1/horarios', methods=['GET'])
+def get_horarios_async():
+    carrera = request.args.get('carrera', 'todas')
+    datos_filtrados = filtrar_dataset(carrera)
+    return jsonify({"status": "success", "data": datos_filtrados})</pre>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-950 border-t border-slate-800 flex justify-end">
+                <button onclick="closeJinjaInspectorModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal / Pantalla Inicial de Inicio de Sesión Multi-Rol -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-fade-in flex flex-col">
+            <!-- Modal Header with Flask Branding -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white p-6 relative">
+                <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg w-8 h-8 rounded-full bg-slate-800/50 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-xl text-white shadow-lg shadow-blue-500/30">
+                        <i class="fa-solid fa-desktop"></i>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-400/20 uppercase tracking-wider">Auth Endpoint • POST /api/v1/login</span>
+                        <h2 class="text-xl font-black text-white mt-1">Iniciar Sesión en EduSpaces</h2>
+                        <p class="text-xs text-slate-300">Selecciona un rol de prueba rápida o ingresa con tu correo universitario.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+                <!-- Quick Demo Login Selection Cards -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono block">Selecciona Perfil de Prueba (Acceso 1-Clic):</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <!-- Role Card: Public User / Student -->
+                        <div onclick="loginAs('publica')" class="border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-50 hover:border-blue-500 rounded-2xl p-3.5 cursor-pointer transition-all flex items-center gap-3 group">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full border-2 border-blue-400 object-cover shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <span class="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md font-mono">Vista Pública</span>
+                                <h4 class="font-bold text-xs text-slate-900 group-hover:text-blue-600 transition-colors mt-0.5 truncate">Sofía Martínez</h4>
+                                <p class="text-[11px] text-slate-500 truncate">Estudiante • Consulta Libre</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-blue-400 group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+
+                        <!-- Role Card: Administrator -->
+                        <div onclick="loginAs('admin')" class="border-2 border-purple-100 bg-purple-50/50 hover:bg-purple-50 hover:border-purple-500 rounded-2xl p-3.5 cursor-pointer transition-all flex items-center gap-3 group">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full border-2 border-purple-400 object-cover shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <span class="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md font-mono">Vista Admin</span>
+                                <h4 class="font-bold text-xs text-slate-900 group-hover:text-purple-600 transition-colors mt-0.5 truncate">Lic. Ricardo Silva</h4>
+                                <p class="text-[11px] text-slate-500 truncate">Administrador General</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-purple-400 group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-200"></div>
+                    <span class="flex-shrink mx-3 text-[11px] font-bold text-slate-400 font-mono">O ingresa credenciales</span>
+                    <div class="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <!-- Custom Credentials Form -->
+                <form onsubmit="handleLoginSubmit(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Correo Institucional / Matrícula</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-envelope absolute left-3 top-3 text-slate-400 text-xs"></i>
+                            <input type="email" id="loginEmail" placeholder="ejemplo@uaemex.mx" required value="ricardo.silva@uaemex.mx" class="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-800">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-bold text-slate-700">Contraseña</label>
+                            <a href="#" onclick="showToast('Flask Auth: Instrucciones de recuperación enviadas.'); return false;" class="text-[11px] text-blue-600 hover:underline font-semibold">¿Olvidaste tu contraseña?</a>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-400 text-xs"></i>
+                            <input type="password" id="loginPassword" placeholder="••••••••" required value="admin123" class="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-800">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs">
+                        <label class="flex items-center gap-2 text-slate-600 font-medium cursor-pointer">
+                            <input type="checkbox" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+                            <span>Recordar mi sesión en cookie Jinja2</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>Iniciar Sesión Asíncrono (Fetch API)</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Footer info -->
+            <div class="p-3 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-500 text-center font-mono flex items-center justify-between px-6">
+                <span>Flask Session Authenticated</span>
+                <span class="text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved mr-1"></i> Sesión Segura</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-xs font-semibold">Respuesta asíncrona recibida de Flask.</span>
+    </div>
+
+    <script>
+        // Global Application State
+        const appState = {
+            viewMode: 'publica', // 'publica' | 'admin'
+            paradigm: 'matriz',  // 'matriz' | 'timeline' | 'cards'
+            adminTab: 'horarios',
+            filters: {
+                carrera: 'todas',
+                grupo: 'todos',
+                profesor: 'todos',
+                sala: 'todas',
+                dia: 'todos'
+            },
+            asyncRequestCount: 0,
+            isLoggedIn: true,
+            currentUser: {
+                nombre: 'Sofía Martínez',
+                correo: 'sofia.martinez@uaemex.mx',
+                rol: 'publica',
+                tituloRol: 'Vista Pública (Estudiantes / Docentes)',
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+            }
+        };
+
+        // Mock dataset for offline client fallback / API simulation
+        const mockDatabase = [
+            { id: 1, materia: 'Sistemas Operativos Avanzados', prof: 'Dr. Carlos Mendoza', grupo: 'ICO 901-9', carrera: 'ICO', sala: 'Lab Cómputo 3', dia: 'Lunes', hora: '07:00 - 09:00', status: 'occupied' },
+            { id: 2, materia: 'Estructura de Datos', prof: 'Ing. Roberto Gómez', grupo: 'ICO 401-2', carrera: 'ICO', sala: 'Lab Cómputo 1', dia: 'Lunes', hora: '09:00 - 11:00', status: 'occupied' },
+            { id: 3, materia: 'Redes de Computadoras', prof: 'Dra. Elena Rostova', grupo: 'IIA 1221-16', carrera: 'IIA', sala: 'Lab Cómputo 2 (Redes)', dia: 'Martes', hora: '11:00 - 13:00', status: 'occupied' },
+            { id: 4, materia: 'Visión por Computadora', prof: 'Dra. Elena Rostova', grupo: 'IIA 1401-1', carrera: 'IIA', sala: 'Lab Cómputo 3', dia: 'Miércoles', hora: '09:00 - 11:00', status: 'occupied' },
+            { id: 5, materia: 'Mantenimiento Preventivo', prof: 'Soporte Técnico', grupo: 'SOPORTE', carrera: 'GENERAL', sala: 'Lab Cómputo 4', dia: 'Jueves', hora: '07:00 - 11:00', status: 'maintenance' },
+            { id: 6, materia: 'Bases de Datos II', prof: 'Mtro. Fernando Paz', grupo: 'ICO 602-1', carrera: 'ICO', sala: 'Lab Cómputo 1', dia: 'Viernes', hora: '13:00 - 15:00', status: 'occupied' }
+        ];
+
+        let currentDataset = [...mockDatabase];
+
+        // Async Fetch function to retrieve, filter schedule data, and update UI
+        async function fetchScheduleAsync() {
+            incrementAsyncCounter();
+            
+            const startTime = performance.now();
+            
+            // Filter dataset according to selected filters
+            currentDataset = mockDatabase.filter(item => {
+                const matchCarrera = appState.filters.carrera === 'todas' || item.carrera === appState.filters.carrera;
+                const matchGrupo = appState.filters.grupo === 'todos' || item.grupo === appState.filters.grupo;
+                const matchProfesor = appState.filters.profesor === 'todos' || item.prof === appState.filters.profesor;
+                const matchSala = appState.filters.sala === 'todas' || item.sala === appState.filters.sala;
+                const matchDia = appState.filters.dia === 'todos' || item.dia === appState.filters.dia;
+                return matchCarrera && matchGrupo && matchProfesor && matchSala && matchDia;
+            });
+
+            // Simulate server network latency calculation
+            const endTime = performance.now();
+            const latency = Math.round(endTime - startTime + Math.random() * 12 + 10);
+            const latencyEl = document.getElementById('ajaxLatency');
+            if (latencyEl) latencyEl.innerText = `~${latency} ms`;
+
+            // Re-render main schedule canvas container
+            renderMainCanvas();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            switchView('publica');
+            setupKeyboardShortcuts();
+        });
+
+        // User Authentication & Modal Handlers
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        function loginAs(roleKey) {
+            incrementAsyncCounter();
+            if (roleKey === 'admin') {
+                appState.currentUser = {
+                    nombre: 'Lic. Ricardo Silva',
+                    correo: 'ricardo.silva@uaemex.mx',
+                    rol: 'admin',
+                    tituloRol: 'Administrador General (Flask Auth)',
+                    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80'
+                };
+                appState.isLoggedIn = true;
+                closeLoginModal();
+                switchView('admin');
+                showToast('Sesión iniciada como Administrador (Lic. Ricardo Silva)');
+            } else {
+                appState.currentUser = {
+                    nombre: 'Sofía Martínez',
+                    correo: 'sofia.martinez@uaemex.mx',
+                    rol: 'publica',
+                    tituloRol: 'Vista Pública (Estudiantes / Docentes)',
+                    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+                };
+                appState.isLoggedIn = true;
+                closeLoginModal();
+                switchView('publica');
+                showToast('Sesión iniciada como Consulta Pública (Sofía Martínez)');
+            }
+            updateUserProfileUI();
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const submitBtn = document.getElementById('btnLoginSubmit');
+
+            submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin"></i> Autenticando vía POST /api/v1/login...`;
+            submitBtn.disabled = true;
+
+            setTimeout(() => {
+                submitBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión Asíncrono (Fetch)`;
+                submitBtn.disabled = false;
+
+                if (email.includes('admin') || email.includes('ricardo')) {
+                    loginAs('admin');
+                } else {
+                    loginAs('publica');
+                }
+            }, 300);
+        }
+
+        function updateUserProfileUI() {
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = document.getElementById('userName');
+            const userBadge = document.getElementById('userBadge');
+
+            if (userAvatar) userAvatar.src = appState.currentUser.avatar;
+            if (userName) userName.innerText = appState.currentUser.nombre;
+            if (userBadge) userBadge.innerText = appState.currentUser.tituloRol;
+        }
+
+        function switchView(mode) {
+            // Permission check: if switching to admin without admin account, open login modal
+            if (mode === 'admin' && (!appState.isLoggedIn || appState.currentUser.rol !== 'admin')) {
+                openLoginModal();
+                showToast('Se requiere cuenta de Administrador para acceder a la Vista Admin.');
+                return;
+            }
+
+            appState.viewMode = mode;
+
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.className = 'view-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-300 hover:text-white flex items-center gap-1.5';
+            });
+
+            if (mode === 'publica') {
+                document.getElementById('btnViewPublica').className = 'view-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow-sm flex items-center gap-1.5';
+                document.getElementById('breadcrumbRole').innerText = 'Vista Pública';
+                document.getElementById('sidebarRoleTag').innerText = 'Consulta Libre';
+                document.getElementById('sidebarRoleTitle').innerText = 'Calendario Asíncrono';
+                document.getElementById('sidebarRoleDesc').innerText = 'Actualizaciones en vivo con Fetch API sin recarga de página.';
+                document.getElementById('paradigmSelector').classList.remove('hidden');
+            } else {
+                document.getElementById('btnViewAdmin').className = 'view-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-600 text-white shadow-sm flex items-center gap-1.5';
+                document.getElementById('breadcrumbRole').innerText = 'Vista Administrativa';
+                document.getElementById('sidebarRoleTag').innerText = 'Gestión Flask';
+                document.getElementById('sidebarRoleTitle').innerText = 'Centro de Control';
+                document.getElementById('sidebarRoleDesc').innerText = 'Asignación, gestión de salas y resolución de conflictos.';
+            }
+
+            updateUserProfileUI();
+            renderSidebarNav();
+            fetchScheduleAsync();
+        }
+
+        function setParadigm(paradigm) {
+            appState.paradigm = paradigm;
+
+            ['Matriz', 'Timeline', 'Cards'].forEach(id => {
+                const btn = document.getElementById(`pBtn${id}`);
+                if (btn) btn.className = 'px-2.5 py-1 text-xs font-medium rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+            });
+
+            const activeBtn = document.getElementById(`pBtn${paradigm.charAt(0).toUpperCase() + paradigm.slice(1)}`);
+            if (activeBtn) activeBtn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all';
+
+            fetchScheduleAsync();
+        }
+
+        function renderSidebarNav() {
+            const nav = document.getElementById('sidebarNav');
+            let links = [];
+
+            if (appState.viewMode === 'publica') {
+                links = [
+                    { icon: 'fa-table-cells', label: 'Consulta General', active: true, action: 'setParadigm(\'matriz\')' },
+                    { icon: 'fa-desktop', label: 'Salas Operativas', active: false, action: 'showToast(\'Flask API: 3 de 4 salas operativas.\')' },
+                    { icon: 'fa-map-location-dot', label: 'Mapa de Laboratorios', active: false, action: 'showToast(\'Edificio A y Edificio B disponibles.\')' },
+                ];
+            } else {
+                links = [
+                    { icon: 'fa-chart-pie', label: 'Dashboard Control', active: appState.adminTab === 'horarios', action: 'setAdminTab(\'horarios\')' },
+                    { icon: 'fa-triangle-exclamation', label: 'Motor Conflictos', active: false, badge: '1', badgeColor: 'bg-purple-600', action: 'openConflictModal()' },
+                    { icon: 'fa-desktop', label: 'Salas de Cómputo', active: appState.adminTab === 'salas', action: 'setAdminTab(\'salas\')' },
+                    { icon: 'fa-boxes-stacked', label: 'Catálogos Academicos', active: appState.adminTab === 'catalogos', action: 'setAdminTab(\'catalogos\')' }
+                ];
+            }
+
+            nav.innerHTML = links.map(link => `
+                <a href="#" onclick="${link.action || 'return false;'}" class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold ${link.active ? 'bg-blue-50 text-blue-700 border border-blue-200/60' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'} transition-all">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid ${link.icon} text-sm"></i>
+                        <span>${link.label}</span>
+                    </div>
+                    ${link.badge ? `<span class="text-[10px] text-white px-2 py-0.5 rounded-full font-bold ${link.badgeColor || 'bg-blue-600'}">${link.badge}</span>` : ''}
+                </a>
+            `).join('');
+        }
+
+        function setAdminTab(tab) {
+            appState.adminTab = tab;
+            renderSidebarNav();
+            fetchScheduleAsync();
+        }
+
+        function renderMainCanvas() {
+            const viewport = document.getElementById('viewContent');
+
+            if (appState.viewMode === 'publica') {
+                viewport.innerHTML = `
+                    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <span class="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider font-mono border border-blue-400/20">Frontend Asíncrono + Jinja2</span>
+                            <h1 class="text-2xl font-extrabold mt-2">Consulta de Horarios de Cómputo</h1>
+                            <p class="text-blue-200 text-xs mt-1">Los filtros actualizan la grilla sin refrescar la página mediante peticiones Fetch a Flask.</p>
+                        </div>
+                        <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-xs shrink-0 font-mono">
+                            <div class="text-center px-3 border-r border-white/20">
+                                <span class="block font-black text-xl text-emerald-400">3</span>
+                                <span class="text-slate-300 text-[10px]">Labs Operativos</span>
+                            </div>
+                            <div class="text-center px-3">
+                                <span class="block font-black text-xl text-blue-400">${currentDataset.length}</span>
+                                <span class="text-slate-300 text-[10px]">Clases Filtradas</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${renderFilterBar()}
+                    ${renderSelectedParadigm()}
+                `;
+            } else {
+                viewport.innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">Ocupación Global</span>
+                                <span class="text-2xl font-black text-slate-800 block mt-1">68%</span>
+                                <span class="text-[11px] text-emerald-600 font-bold"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Normal</span>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">Salas Operativas</span>
+                                <span class="text-2xl font-black text-slate-800 block mt-1">3 / 4</span>
+                                <span class="text-[11px] text-amber-600 font-bold">1 En Mantenimiento</span>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-desktop"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">Peticiones AJAX</span>
+                                <span class="text-2xl font-black text-blue-600 block mt-1" id="kpiAsyncCount">${appState.asyncRequestCount}</span>
+                                <span class="text-[11px] text-slate-500 font-medium">Actualizaciones asíncronas</span>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">Empalmes Detectados</span>
+                                <span class="text-2xl font-black text-purple-600 block mt-1">1</span>
+                                <span class="text-[11px] text-purple-600 font-bold">Requiere atención</span>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-900 text-white rounded-2xl p-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 rounded-xl bg-purple-800 text-purple-300 flex items-center justify-center font-bold shrink-0">
+                                <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                            </span>
+                            <div>
+                                <h4 class="font-bold text-sm">Empalme Detectado por Flask Engine</h4>
+                                <p class="text-xs text-purple-200">Grupo ICO 901-9 e IIA 1221-16 coinciden en Lab Cómputo 3 (Jueves 11:00 AM).</p>
+                            </div>
+                        </div>
+                        <button onclick="openConflictModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition-colors shrink-0 shadow-md">
+                            Resolver vía AJAX (1-Clic)
+                        </button>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                        <div class="flex items-center gap-6 border-b border-slate-200 text-xs font-bold text-slate-500 pb-3">
+                            <button onclick="setAdminTab('horarios')" class="${appState.adminTab === 'horarios' ? 'text-blue-600 border-b-2 border-blue-600 pb-3 -mb-3' : 'hover:text-slate-800'}">Asignación de Horarios</button>
+                            <button onclick="setAdminTab('salas')" class="${appState.adminTab === 'salas' ? 'text-blue-600 border-b-2 border-blue-600 pb-3 -mb-3' : 'hover:text-slate-800'}">Salas & Equipamiento</button>
+                            <button onclick="setAdminTab('catalogos')" class="${appState.adminTab === 'catalogos' ? 'text-blue-600 border-b-2 border-blue-600 pb-3 -mb-3' : 'hover:text-slate-800'}">Catálogos Backend</button>
+                        </div>
+                        ${renderMatrizView()}
+                    </div>
+                `;
+            }
+        }
+
+        function renderFilterBar() {
+            return `
+                <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-800">
+                            <i class="fa-solid fa-filter text-blue-600"></i>
+                            <span>Filtros Asíncronos (Fetch API / AJAX):</span>
+                        </div>
+                        <div class="flex items-center gap-4 text-xs font-bold">
+                            <span class="flex items-center gap-1.5 text-emerald-800"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Libre</span>
+                            <span class="flex items-center gap-1.5 text-red-800"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Ocupado</span>
+                            <span class="flex items-center gap-1.5 text-amber-800"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Mantenimiento</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                        <select onchange="applyAsyncFilter('carrera', this.value)" class="text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold text-slate-700">
+                            <option value="todas" ${appState.filters.carrera === 'todas' ? 'selected' : ''}>Carrera: Todas</option>
+                            <option value="ICO" ${appState.filters.carrera === 'ICO' ? 'selected' : ''}>Ing. Cómputo (ICO)</option>
+                            <option value="IIA" ${appState.filters.carrera === 'IIA' ? 'selected' : ''}>Ing. IA (IIA)</option>
+                        </select>
+                        <select onchange="applyAsyncFilter('grupo', this.value)" class="text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold text-slate-700">
+                            <option value="todos" ${appState.filters.grupo === 'todos' ? 'selected' : ''}>Grupo: Todos</option>
+                            <option value="ICO 901-9" ${appState.filters.grupo === 'ICO 901-9' ? 'selected' : ''}>ICO 901-9</option>
+                            <option value="ICO 401-2" ${appState.filters.grupo === 'ICO 401-2' ? 'selected' : ''}>ICO 401-2</option>
+                            <option value="IIA 1221-16" ${appState.filters.grupo === 'IIA 1221-16' ? 'selected' : ''}>IIA 1221-16</option>
+                        </select>
+                        <select onchange="applyAsyncFilter('profesor', this.value)" class="text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold text-slate-700">
+                            <option value="todos" ${appState.filters.profesor === 'todos' ? 'selected' : ''}>Profesor: Todos</option>
+                            <option value="Dr. Carlos Mendoza" ${appState.filters.profesor === 'Dr. Carlos Mendoza' ? 'selected' : ''}>Dr. Carlos Mendoza</option>
+                            <option value="Dra. Elena Rostova" ${appState.filters.profesor === 'Dra. Elena Rostova' ? 'selected' : ''}>Dra. Elena Rostova</option>
+                        </select>
+                        <select onchange="applyAsyncFilter('sala', this.value)" class="text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold text-slate-700">
+                            <option value="todas" ${appState.filters.sala === 'todas' ? 'selected' : ''}>Sala: Todas</option>
+                            <option value="Lab Cómputo 1" ${appState.filters.sala === 'Lab Cómputo 1' ? 'selected' : ''}>Lab Cómputo 1</option>
+                            <option value="Lab Cómputo 2 (Redes)" ${appState.filters.sala === 'Lab Cómputo 2 (Redes)' ? 'selected' : ''}>Lab Cómputo 2</option>
+                            <option value="Lab Cómputo 3" ${appState.filters.sala === 'Lab Cómputo 3' ? 'selected' : ''}>Lab Cómputo 3</option>
+                        </select>
+                        <select onchange="applyAsyncFilter('dia', this.value)" class="text-xs border border-slate-200 rounded-xl p-2 bg-slate-50 focus:bg-white focus:outline-none font-semibold text-slate-700">
+                            <option value="todos" ${appState.filters.dia === 'todos' ? 'selected' : ''}>Día: Toda la Semana</option>
+                            <option value="Lunes" ${appState.filters.dia === 'Lunes' ? 'selected' : ''}>Lunes</option>
+                            <option value="Martes" ${appState.filters.dia === 'Martes' ? 'selected' : ''}>Martes</option>
+                            <option value="Miércoles" ${appState.filters.dia === 'Miércoles' ? 'selected' : ''}>Miércoles</option>
+                            <option value="Jueves" ${appState.filters.dia === 'Jueves' ? 'selected' : ''}>Jueves</option>
+                            <option value="Viernes" ${appState.filters.dia === 'Viernes' ? 'selected' : ''}>Viernes</option>
+                        </select>
+                        <button onclick="resetFiltersAsync()" class="text-xs text-slate-600 hover:text-blue-600 border border-slate-200 rounded-xl p-2 bg-slate-50 hover:bg-slate-100 transition-colors font-bold flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> Restablecer
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSelectedParadigm() {
+            if (appState.paradigm === 'matriz') return renderMatrizView();
+            if (appState.paradigm === 'timeline') return renderTimelineView();
+            if (appState.paradigm === 'cards') return renderCardsView();
+        }
+
+        function renderMatrizView() {
+            const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+            const horas = ['07:00 - 09:00', '09:00 - 11:00', '11:00 - 13:00', '13:00 - 15:00'];
+
+            return `
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900 text-white text-xs font-bold">
+                                    <th class="p-3 border-b border-slate-800 w-28 text-center font-mono"><i class="fa-regular fa-clock mr-1"></i> Hora</th>
+                                    ${dias.map(d => `<th class="p-3 border-b border-slate-800 text-center">${d}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 text-xs">
+                                ${horas.map(hora => `
+                                    <tr>
+                                        <td class="p-3 font-bold text-slate-500 bg-slate-50 text-center font-mono">${hora}</td>
+                                        ${dias.map(dia => {
+                                            const match = currentDataset.find(item => item.dia === dia && item.hora === hora);
+                                            if (match) {
+                                                if (match.status === 'maintenance') {
+                                                    return `
+                                                        <td class="p-2">
+                                                            <div class="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl space-y-1">
+                                                                <span class="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider block font-mono"><i class="fa-solid fa-wrench mr-1"></i> Mantenimiento</span>
+                                                                <div class="font-bold text-xs">${match.sala}</div>
+                                                                <div class="text-[10px] text-amber-600">Revisión de Redes</div>
+                                                            </div>
+                                                        </td>
+                                                    `;
+                                                }
+                                                return `
+                                                    <td class="p-2">
+                                                        <div class="bg-red-50 hover:bg-red-100/80 border border-red-200 text-red-950 p-2.5 rounded-xl transition-all space-y-1 shadow-sm">
+                                                            <div class="flex items-center justify-between">
+                                                                <span class="text-[10px] font-bold bg-red-200 text-red-900 px-1.5 py-0.5 rounded font-mono">${match.grupo}</span>
+                                                                <i class="fa-solid fa-lock text-red-400 text-[10px]"></i>
+                                                            </div>
+                                                            <div class="font-bold text-xs text-slate-900 truncate">${match.materia}</div>
+                                                            <div class="text-[10px] text-slate-600 truncate"><i class="fa-solid fa-user-tie text-slate-400 mr-1"></i>${match.prof}</div>
+                                                            <div class="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded inline-block mt-1 font-mono">${match.sala}</div>
+                                                        </div>
+                                                    </td>
+                                                `;
+                                            } else {
+                                                return `
+                                                    <td class="p-2">
+                                                        <div onclick="showToast('Consulta Flask: Franja libre para prácticas sin reserva.')" class="bg-emerald-50/50 hover:bg-emerald-100/80 border border-dashed border-emerald-200 text-emerald-800 p-2.5 rounded-xl cursor-pointer transition-all group flex flex-col justify-between min-h-[82px]">
+                                                            <div class="flex items-center justify-between text-[10px] text-emerald-700 font-bold">
+                                                                <span><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> Libre</span>
+                                                            </div>
+                                                            <div class="text-[10px] text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-center">
+                                                                Disponible
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                `;
+                                            }
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTimelineView() {
+            const salas = ['Lab Cómputo 1', 'Lab Cómputo 2 (Redes)', 'Lab Cómputo 3', 'Lab Cómputo 4'];
+            return `
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 text-sm">Timeline por Laboratorio (Datos JSON Flask)</h3>
+                        <span class="text-xs text-slate-400 font-mono">Actualización asíncrona</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        ${salas.map((sala) => `
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center text-xs font-bold text-slate-700">
+                                    <span><i class="fa-solid fa-desktop text-blue-600 mr-1.5"></i> ${sala}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono">Capacidad: 30 PCs</span>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2 bg-slate-100 p-2 rounded-xl">
+                                    <div class="bg-red-500 text-white p-2.5 rounded-lg text-[10px] font-bold text-center shadow-sm">
+                                        07:00-09:00<br>Ocupado
+                                    </div>
+                                    <div class="bg-emerald-500 text-white p-2.5 rounded-lg text-[10px] font-bold text-center shadow-sm cursor-pointer hover:bg-emerald-600">
+                                        09:00-11:00<br>LIBRE
+                                    </div>
+                                    <div class="bg-red-500 text-white p-2.5 rounded-lg text-[10px] font-bold text-center shadow-sm">
+                                        11:00-13:00<br>Ocupado
+                                    </div>
+                                    <div class="bg-emerald-500 text-white p-2.5 rounded-lg text-[10px] font-bold text-center shadow-sm cursor-pointer hover:bg-emerald-600">
+                                        13:00-15:00<br>LIBRE
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCardsView() {
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${currentDataset.map(item => `
+                        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full font-mono">${item.grupo}</span>
+                                <span class="text-xs font-bold ${item.status === 'occupied' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50'} px-2 py-0.5 rounded-md">
+                                    ${item.status === 'occupied' ? 'Asignada' : 'Mantenimiento'}
+                                </span>
+                            </div>
+                            <div>
+                                <h4 class="font-extrabold text-base text-slate-800">${item.materia}</h4>
+                                <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-user-tie mr-1 text-slate-400"></i> ${item.prof}</p>
+                            </div>
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 font-medium">
+                                <span><i class="fa-regular fa-clock text-blue-600 mr-1"></i> ${item.dia} ${item.hora}</span>
+                                <span class="font-bold text-slate-800 font-mono"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i> ${item.sala}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function applyAsyncFilter(key, val) {
+            appState.filters[key] = val;
+            showToast(`Filtro AJAX '${key}': ${val}`);
+            fetchScheduleAsync();
+        }
+
+        function resetFiltersAsync() {
+            appState.filters = { carrera: 'todas', grupo: 'todos', profesor: 'todos', sala: 'todas', dia: 'todos' };
+            showToast('Filtros restablecidos.');
+            fetchScheduleAsync();
+        }
+
+        function handleAsyncGlobalSearch(term) {
+            const spinner = document.getElementById('searchSpinner');
+            const resultsList = document.getElementById('searchResultsList');
+
+            if (term.length < 2) {
+                resultsList.innerHTML = `<div class="text-xs text-slate-400 italic p-3 text-center">Escribe 2 o más caracteres para buscar de forma asíncrona...</div>`;
+                return;
+            }
+
+            spinner.classList.remove('hidden');
+            incrementAsyncCounter();
+
+            setTimeout(() => {
+                spinner.classList.add('hidden');
+                const matches = mockDatabase.filter(x => 
+                    x.materia.toLowerCase().includes(term.toLowerCase()) || 
+                    x.prof.toLowerCase().includes(term.toLowerCase()) ||
+                    x.grupo.toLowerCase().includes(term.toLowerCase())
+                );
+
+                if (matches.length === 0) {
+                    resultsList.innerHTML = `<div class="text-xs text-slate-500 p-3 text-center">Sin coincidencias en el backend de Flask para "${term}".</div>`;
+                } else {
+                    resultsList.innerHTML = matches.map(m => `
+                        <div onclick="selectSearchItem('${m.materia}')" class="p-3 hover:bg-blue-50/80 rounded-xl cursor-pointer flex items-center justify-between border border-transparent hover:border-blue-200 transition-all">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs font-mono">${m.carrera}</span>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800">${m.materia}</div>
+                                    <div class="text-[11px] text-slate-500">${m.grupo} • ${m.prof}</div>
+                                </div>
+                            </div>
+                            <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold font-mono">${m.sala}</span>
+                        </div>
+                    `).join('');
+                }
+            }, 180);
+        }
+
+        function selectSearchItem(materia) {
+            closeSearchModal();
+            showToast(`Filtro asíncrono aplicado: ${materia}`);
+        }
+
+        function executeAsyncConflictResolution() {
+            incrementAsyncCounter();
+            closeConflictModal();
+            showToast('POST /api/v1/conflictos/resolver (200 OK): Redes reasignada a Lab 1.');
+        }
+
+        function incrementAsyncCounter() {
+            appState.asyncRequestCount++;
+            const badge = document.getElementById('asyncLogCounter');
+            if (badge) badge.innerText = `${appState.asyncRequestCount} Peticiones Asíncronas`;
+            const kpi = document.getElementById('kpiAsyncCount');
+            if (kpi) kpi.innerText = appState.asyncRequestCount;
+        }
+
+        function openSearchModal() {
+            document.getElementById('searchModal').classList.remove('hidden');
+            document.getElementById('globalSearchInput').focus();
+        }
+
+        function closeSearchModal() {
+            document.getElementById('searchModal').classList.add('hidden');
+        }
+
+        function openConflictModal() {
+            document.getElementById('conflictModal').classList.remove('hidden');
+        }
+
+        function closeConflictModal() {
+            document.getElementById('conflictModal').classList.add('hidden');
+        }
+
+        function openJinjaInspectorModal() {
+            document.getElementById('jinjaInspectorModal').classList.remove('hidden');
+        }
+
+        function closeJinjaInspectorModal() {
+            document.getElementById('jinjaInspectorModal').classList.add('hidden');
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function setupKeyboardShortcuts() {
+            window.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    openSearchModal();
+                }
+                if (e.key === 'Escape') {
+                    closeSearchModal();
+                    closeConflictModal();
+                    closeJinjaInspectorModal();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
