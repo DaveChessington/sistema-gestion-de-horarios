@@ -3,19 +3,17 @@ import os
 class Config:
     # Llave secreta para JWT o sesiones
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'super-secret-key-udl'
-    
+
     # Configuración de base de datos PostgreSQL
-    user = os.environ.get('DB_USER')
-    password = os.environ.get('DB_PASSWORD')
-    host = os.environ.get('HOST')
-    port = os.environ.get('PORT')
-    db_name = os.environ.get('DB_NAME')
-    """    
-    if all([user, password, host, port, db_name]):
-        SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}"
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url:
+        SQLALCHEMY_DATABASE_URI = db_url
     else:
-        SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg://postgres:root@127.0.0.1:5432/gestion_horarios_UDL'
-    print(SQLALCHEMY_DATABASE_URI)"""
-    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg://postgres:root@127.0.0.1:5432/gestion_horarios_udl'
-    
+        user = os.environ.get('DB_USER') or 'postgres'
+        password = os.environ.get('DB_PASSWORD') or 'root'
+        host = os.environ.get('HOST') or '127.0.0.1'
+        port = os.environ.get('PORT') or '5432'
+        db_name = os.environ.get('DB_NAME') or 'gestion_horaios_udl'
+        SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}"
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
