@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------
+  # PostgreSQL – shared database for all modules
+  # -------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${POSTGRES_CONTAINER_NAME:-postgres_db}
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+
+  # -------------------------------------------------
+  # Main Flask application (root Dockerfile)
+  # -------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app_service
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: ${POSTGRES_CONTAINER_NAME:-postgres_db}
+      DB_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
+    depends_on:
+      - postgres
+    networks:
+      - backend_net
+
+  # -------------------------------------------------
+  # IAM microservice (iam/Dockerfile)
+  # -------------------------------------------------
+  iam:
+    build:
+      context: ./iam
+      dockerfile: Dockerfile
+    container_name: iam
+    restart: always
+    ports:
+      - "5001:5000" # host 5001 → internal 5000
+    environment:
+      DB_HOST: ${POSTGRES_CONTAINER_NAME:-postgres_db}
+      DB_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
+    depends_on:
+      - postgres
+    networks:
+      - backend_net
+
+volumes:
+  postgres_data:
+
+networks:
+  backend_net:
+    driver: bridge
