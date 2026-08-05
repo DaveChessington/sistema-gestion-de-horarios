@@ -1,8 +1,8 @@
-from app.extensions import db
-from app.models.plantel import Plantel
-from app.models.salon import Salon
-from app.models.equipo import Equipo
-from app.models.programa import Programa
+from catalog.app.extensions import db
+from catalog.app.models.plantel import Plantel
+from catalog.app.models.salon import Salon
+from catalog.app.models.equipo import Equipo
+from catalog.app.models.programa import Programa
 
 # Excepciones personalizadas para un manejo de errores limpio
 class EntityNotFoundException(Exception):

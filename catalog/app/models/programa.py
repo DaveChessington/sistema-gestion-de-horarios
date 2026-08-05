@@ -1,4 +1,4 @@
-from app.extensions import db
+from catalog.app.extensions import db
 
 class Programa(db.Model):
     __tablename__ = 'programas'

@@ -1,6 +1,6 @@
 from flask import Flask
-from config import Config
-from app.extensions import db
+from catalog.config import Config
+from catalog.app.extensions import db
 from sqlalchemy import text
 
 def create_app(config_class=Config):
@@ -11,17 +11,17 @@ def create_app(config_class=Config):
     db.init_app(app)
 
     # Registrar Blueprints
-    from app.routes.catalog_routes import catalog_bp
+    from catalog.app.routes.catalog_routes import catalog_bp
     app.register_blueprint(catalog_bp, url_prefix='/api/v1')
 
     # Crear tablas en el primer contexto si no existen
     with app.app_context():
         # Importar modelos para asegurar registro en SQLAlchemy
-        from app.models.plantel import Plantel
-        from app.models.software import software_asociacion
-        from app.models.salon import Salon
-        from app.models.equipo import Equipo
-        from app.models.programa import Programa
+        from catalog.app.models.plantel import Plantel
+        from catalog.app.models.software import software_asociacion
+        from catalog.app.models.salon import Salon
+        from catalog.app.models.equipo import Equipo
+        from catalog.app.models.programa import Programa
         
         # Si es SQLite (pruebas), removemos el esquema para evitar errores de SQLite en memoria
         if db.engine.url.drivername == 'sqlite':

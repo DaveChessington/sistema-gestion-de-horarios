@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.catalog_service import (
+from catalog.app.services.catalog_service import (
     CampusService,
     EquipmentService,
     ProgramService,

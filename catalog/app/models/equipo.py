@@ -1,5 +1,5 @@
-from app.extensions import db
-from app.models.software import software_asociacion
+from catalog.app.extensions import db
+from catalog.app.models.software import software_asociacion
 
 class Equipo(db.Model):
     __tablename__ = 'equipos'

@@ -1,4 +1,4 @@
-from app.extensions import db
+from catalog.app.extensions import db
 
 class Plantel(db.Model):
     __tablename__ = 'planteles'

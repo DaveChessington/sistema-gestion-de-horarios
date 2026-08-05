@@ -1,4 +1,4 @@
-from app.extensions import db
+from catalog.app.extensions import db
 
 # Tabla intermedia para la relación muchos a muchos de equipos y programas (software instalado)
 software_asociacion = db.Table(
