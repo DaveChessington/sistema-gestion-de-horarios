@@ -13,7 +13,11 @@ def create_app(config_class=Config):
     from app.routes.auth_routes import auth_bp
     app.register_blueprint(auth_bp)
 
-    # Crear tablas en el primer contexto (solo para facilitar pruebas, en prod se usaría Flask-Migrate)
+    # Registrar comandos CLI
+    from app.commands import register_commands
+    register_commands(app)
+
+    # Crear tablas en el primer contexto
     with app.app_context():
         from app.models.plantel import Plantel
         from app.models.usuario import Usuario
