@@ -18,6 +18,11 @@ class InvalidDataException(Exception):
     pass
 
 
+class PermissionDeniedException(Exception):
+    """Excepción lanzada cuando el usuario no tiene permisos para realizar una acción."""
+    pass
+
+
 class CampusService:
     @staticmethod
     def create_plantel(nombre, direccion=None):
