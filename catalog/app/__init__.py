@@ -1,7 +1,7 @@
 from flask import Flask
 from catalog.config import Config
 from catalog.app.extensions import db
-from sqlalchemy import text
+from catalog.app.utils.db_init import init_db
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -14,7 +14,7 @@ def create_app(config_class=Config):
     from catalog.app.routes.catalog_routes import catalog_bp
     app.register_blueprint(catalog_bp, url_prefix='/api/v1')
 
-    # Crear tablas en el primer contexto si no existen
+    # Crear esquemas y tablas en el primer contexto si no existen
     with app.app_context():
         # Importar modelos para asegurar registro en SQLAlchemy
         from catalog.app.models.plantel import Plantel
@@ -22,16 +22,8 @@ def create_app(config_class=Config):
         from catalog.app.models.salon import Salon
         from catalog.app.models.equipo import Equipo
         from catalog.app.models.programa import Programa
-        
-        # Si es SQLite (pruebas), removemos el esquema para evitar errores de SQLite en memoria
-        if db.engine.url.drivername == 'sqlite':
-            for table in db.metadata.tables.values():
-                table.schema = None
-        else:
-            # Crear el esquema si no existe en PostgreSQL
-            db.session.execute(text("CREATE SCHEMA IF NOT EXISTS catalogos;"))
-            db.session.commit()
-            
-        db.create_all()
+
+        # init_db crea el esquema 'catalogos' si hace falta y ejecuta db.create_all()
+        init_db(app, db)
 
     return app

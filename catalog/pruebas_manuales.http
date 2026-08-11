@@ -1,0 +1,182 @@
+### Variables
+@baseUrl = http://localhost:5002/api/v1
+@authUrl = http://localhost:5001/api/v1/auth
+# Tokens obtenidos llamando al servicio IAM
+@tokenAdmin = {{loginAdmin.response.body.token}}
+@tokenEncargado = {{loginEncargado.response.body.token}}
+@tokenDocente = {{loginDocente.response.body.token}}
+@tokenAlumno = {{loginAlumno.response.body.token}}
+
+### ==========================================
+### OBTENER TOKENS (IAM)
+### ==========================================
+
+### Login - Administrador
+# @name loginAdmin
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "admin@udl.edu.mx",
+    "password": "password123"
+}
+
+### Login - Encargado
+# @name loginEncargado
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "encargado@udl.edu.mx",
+    "password": "password123"
+}
+
+### Login - Docente
+# @name loginDocente
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "docente@udl.edu.mx",
+    "password": "password123"
+}
+
+### Login - Alumno
+# @name loginAlumno
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "alumno@udl.edu.mx",
+    "password": "password123"
+}
+
+### ==========================================
+### PRUEBAS PLANTELES
+### ==========================================
+
+### 1. Crear Plantel (Admin) - Debe devolver 201
+POST {{baseUrl}}/planteles
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "Plantel Prueba 1",
+    "direccion": "Calle Ficticia 123"
+}
+
+### 2. Listar Planteles (Admin) - Debe devolver 200
+GET {{baseUrl}}/planteles
+Authorization: Bearer {{tokenAdmin}}
+
+### 3. Obtener Plantel por ID (Admin) - Debe devolver 200
+GET {{baseUrl}}/planteles/1
+Authorization: Bearer {{tokenAdmin}}
+
+### ==========================================
+### PRUEBAS SALONES
+### ==========================================
+
+### 4. Crear Salón (Admin) - Debe devolver 201
+POST {{baseUrl}}/salones
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "numero": "A101",
+    "descripcion": "Laboratorio 1",
+    "capacidad": 30,
+    "id_plantel": 1
+}
+
+### 5. Crear Salón (Encargado de otro plantel) - Debe devolver 403 si pertenece a distinto plantel
+POST {{baseUrl}}/salones
+Content-Type: application/json
+Authorization: Bearer {{tokenEncargado}}
+
+{
+    "numero": "B202",
+    "descripcion": "Aula 2",
+    "capacidad": 25,
+    "id_plantel": 2
+}
+
+### 6. Listar Salones (Encargado) - Debe devolver sólo los del `id_plantel` del token
+GET {{baseUrl}}/salones
+Authorization: Bearer {{tokenEncargado}}
+
+### 7. Actualizar Salón (Encargado) - Si intenta actualizar salón de otro plantel -> 403
+PUT {{baseUrl}}/salones/1
+Content-Type: application/json
+Authorization: Bearer {{tokenEncargado}}
+
+{
+    "numero": "A101",
+    "descripcion": "Laboratorio actualizado",
+    "capacidad": 32,
+    "id_plantel": 1
+}
+
+### 8. Eliminar Salón (Admin) - Soft delete (activo=False)
+DELETE {{baseUrl}}/salones/1
+Authorization: Bearer {{tokenAdmin}}
+
+### ==========================================
+### PRUEBAS EQUIPOS
+### ==========================================
+
+### 9. Crear Programa (Admin) - Necesario para asignación de software
+POST {{baseUrl}}/programas
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "LibreOffice",
+    "descripcion": "Suite ofimática"
+}
+
+### 10. Crear Equipo (Encargado) - Debe devolver 201 si es de su plantel
+POST {{baseUrl}}/equipos
+Content-Type: application/json
+Authorization: Bearer {{tokenEncargado}}
+
+{
+    "numero": "EQ-0001",
+    "descripcion": "PC laboratorio A101",
+    "id_salon": 1
+}
+
+### 11. Asignar Software a Equipo (Encargado) - Debe devolver 200
+POST {{baseUrl}}/equipos/1/software
+Content-Type: application/json
+Authorization: Bearer {{tokenEncargado}}
+
+{
+    "id_programa": 1
+}
+
+### 12. Quitar Software de Equipo (Encargado) - Debe devolver 200
+DELETE {{baseUrl}}/equipos/1/software/1
+Authorization: Bearer {{tokenEncargado}}
+
+### 13. Eliminar Equipo (Admin) - Soft delete (activo=False)
+DELETE {{baseUrl}}/equipos/1
+Authorization: Bearer {{tokenAdmin}}
+
+### ==========================================
+### PRUEBAS DE ACCESO (401 / 403)
+### ==========================================
+
+### 14. Acceso sin token - Debe devolver 401
+GET {{baseUrl}}/salones
+
+### 15. Usuario con rol Docente intenta crear equipo - Debe devolver 403
+POST {{baseUrl}}/equipos
+Content-Type: application/json
+Authorization: Bearer {{tokenDocente}}
+
+{
+    "numero": "EQ-9999",
+    "descripcion": "Intento inválido",
+    "id_salon": 1
+}

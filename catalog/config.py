@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'secret-key-catalogos-udl'
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or SECRET_KEY
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or os.environ.get('SECRET_KEY') or 'super-secret-key-udl'
     
     # Configuración de base de datos PostgreSQL
     DB_USER = os.environ.get('DB_USER', 'postgres')

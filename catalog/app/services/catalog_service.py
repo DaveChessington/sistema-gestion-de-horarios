@@ -17,6 +17,10 @@ class InvalidDataException(Exception):
     """Excepción lanzada cuando la data provista viola reglas de negocio (ej. capacidad <= 0 o asociaciones inválidas)."""
     pass
 
+class PermissionDeniedException(Exception):
+    """Excepción lanzada cuando el usuario autenticado no tiene permisos para realizar la operación (RBAC / tenant mismatch)."""
+    pass
+
 
 class PermissionDeniedException(Exception):
     """Excepción lanzada cuando el usuario no tiene permisos para realizar una acción."""
