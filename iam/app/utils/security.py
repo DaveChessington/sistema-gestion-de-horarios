@@ -12,12 +12,12 @@ def generate_token(usuario):
         'id_plantel_asignado': usuario.id_plantel_asignado,
         'exp': datetime.utcnow() + timedelta(hours=8)
     }
-    return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+    return jwt.encode(payload, current_app.config['JWT_SECRET_KEY'], algorithm='HS256')
 
 def decode_token(token):
     """Decodifica un JWT y retorna el payload o None si es inválido/expirado."""
     try:
-        return jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        return jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None
 

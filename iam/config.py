@@ -3,6 +3,7 @@ import os
 class Config:
     # Llave secreta para JWT o sesiones
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'super-secret-key-udl'
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or SECRET_KEY
 
     # Configuración de base de datos PostgreSQL
     db_url = os.environ.get('DATABASE_URL')

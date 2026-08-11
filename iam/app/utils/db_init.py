@@ -10,7 +10,7 @@ def create_schemas(db):
     - auth: Tablas relacionadas a autenticación y usuarios
     - plantel: Tablas relacionadas a planteles
     """
-    schemas = ['auth', 'plantel']
+    schemas = ['auth']
     
     with db.engine.connect() as connection:
         for schema in schemas:
