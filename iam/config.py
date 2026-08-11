@@ -18,3 +18,4 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    CATALOG_API_BASE_URL = os.environ.get('CATALOG_API_BASE_URL') or 'http://127.0.0.1:5002/api/v1'

@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from app.models.usuario import Usuario
 from app.services.auth_service import AuthService
 from app.utils.security import login_required, role_required
 
@@ -33,6 +34,14 @@ def login():
         'token': resultado['token'],
         'usuario': resultado['usuario']
     }), resultado['status_code']
+
+@auth_bp.route('/users', methods=['GET'], strict_slashes=False)
+@login_required
+@role_required('COORDINADOR', 'ADMIN_PLANTEL')
+def list_users(current_user_payload):
+    """Ruta para listar todos los usuarios registrados."""
+    usuarios = Usuario.query.all()
+    return jsonify({'usuarios': [u.to_dict() for u in usuarios]}), 200
 
 @auth_bp.route('/me', methods=['GET'], strict_slashes=False)
 @login_required

@@ -33,14 +33,12 @@ def create_plantel():
         return jsonify({'error': 'Error interno del servidor.'}), 500
 
 @catalog_bp.route('/planteles', methods=['GET'])
-@login_required
 def list_planteles():
     active_only = request.args.get('active_only', 'true').lower() == 'true'
     planteles = CampusService.list_planteles(active_only=active_only)
     return jsonify([p.to_dict() for p in planteles]), 200
 
 @catalog_bp.route('/planteles/<int:id_plantel>', methods=['GET'])
-@login_required
 def get_plantel(id_plantel):
     try:
         plantel = CampusService.get_plantel_by_id(id_plantel, active_only=True)
@@ -99,9 +97,7 @@ def create_salon():
         return jsonify({'error': 'Error interno del servidor.'}), 500
 
 @catalog_bp.route('/salones', methods=['GET'])
-@login_required
 def list_salones():
-    current_user = g.current_user
     active_only = request.args.get('active_only', 'true').lower() == 'true'
     id_plantel = request.args.get('id_plantel', type=int)
     software_id = request.args.get('software_id', type=int)
@@ -109,17 +105,14 @@ def list_salones():
     salones = CampusService.list_salones(
         active_only=active_only,
         id_plantel=id_plantel,
-        software_id=software_id,
-        current_user=current_user
+        software_id=software_id
     )
     return jsonify([s.to_dict() for s in salones]), 200
 
 @catalog_bp.route('/salones/<int:id_salon>', methods=['GET'])
-@login_required
 def get_salon(id_salon):
-    current_user = g.current_user
     try:
-        salon = CampusService.get_salon_by_id(id_salon, active_only=True, current_user=current_user)
+        salon = CampusService.get_salon_by_id(id_salon, active_only=True)
         return jsonify(salon.to_dict()), 200
     except EntityNotFoundException as e:
         return jsonify({'error': str(e)}), 404
@@ -186,25 +179,20 @@ def create_equipment():
         return jsonify({'error': 'Error interno del servidor.'}), 500
 
 @catalog_bp.route('/equipos', methods=['GET'])
-@login_required
 def list_equipments():
-    current_user = g.current_user
     active_only = request.args.get('active_only', 'true').lower() == 'true'
     id_salon = request.args.get('id_salon', type=int)
     
     equipos = EquipmentService.list_equipments(
         active_only=active_only,
-        id_salon=id_salon,
-        current_user=current_user
+        id_salon=id_salon
     )
     return jsonify([e.to_dict() for e in equipos]), 200
 
 @catalog_bp.route('/equipos/<int:id_equipo>', methods=['GET'])
-@login_required
 def get_equipment(id_equipo):
-    current_user = g.current_user
     try:
-        equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True, current_user=current_user)
+        equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
         return jsonify(equipo.to_dict()), 200
     except EntityNotFoundException as e:
         return jsonify({'error': str(e)}), 404
@@ -266,14 +254,12 @@ def create_program():
         return jsonify({'error': str(e)}), 400
 
 @catalog_bp.route('/programas', methods=['GET'])
-@login_required
 def list_programs():
     active_only = request.args.get('active_only', 'true').lower() == 'true'
     programas = ProgramService.list_programs(active_only=active_only)
     return jsonify([p.to_dict() for p in programas]), 200
 
 @catalog_bp.route('/programas/<int:id_programa>', methods=['GET'])
-@login_required
 def get_program(id_programa):
     try:
         programa = ProgramService.get_program_by_id(id_programa, active_only=True)
