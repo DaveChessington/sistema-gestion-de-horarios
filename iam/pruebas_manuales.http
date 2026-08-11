@@ -95,11 +95,16 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-    "correo": "juan.perez@udl.edu.mx",
+    "correo": "docente@udl.edu.mx",
     "password": "password123"
 }
 
-### 6. Login - Contraseña incorrecta
+### 6. Listar todos los usuarios (Admin)
+# Debería devolver 200 OK con el listado de usuarios
+GET {{baseUrl}}/users
+Authorization: Bearer {{tokenAdmin}}
+
+### 7. Login - Contraseña incorrecta
 # Debería devolver 401 Unauthorized
 POST {{baseUrl}}/login
 Content-Type: application/json

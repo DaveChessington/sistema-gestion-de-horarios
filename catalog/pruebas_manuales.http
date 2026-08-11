@@ -65,13 +65,11 @@ Authorization: Bearer {{tokenAdmin}}
     "direccion": "Calle Ficticia 123"
 }
 
-### 2. Listar Planteles (Admin) - Debe devolver 200
+### 2. Listar Planteles sin token - Debe devolver 200
 GET {{baseUrl}}/planteles
-Authorization: Bearer {{tokenAdmin}}
 
-### 3. Obtener Plantel por ID (Admin) - Debe devolver 200
+### 3. Obtener Plantel por ID sin token - Debe devolver 200
 GET {{baseUrl}}/planteles/1
-Authorization: Bearer {{tokenAdmin}}
 
 ### ==========================================
 ### PRUEBAS SALONES
@@ -101,9 +99,8 @@ Authorization: Bearer {{tokenEncargado}}
     "id_plantel": 2
 }
 
-### 6. Listar Salones (Encargado) - Debe devolver sólo los del `id_plantel` del token
+### 6. Listar Salones sin token - Debe devolver 200
 GET {{baseUrl}}/salones
-Authorization: Bearer {{tokenEncargado}}
 
 ### 7. Actualizar Salón (Encargado) - Si intenta actualizar salón de otro plantel -> 403
 PUT {{baseUrl}}/salones/1
@@ -125,7 +122,10 @@ Authorization: Bearer {{tokenAdmin}}
 ### PRUEBAS EQUIPOS
 ### ==========================================
 
-### 9. Crear Programa (Admin) - Necesario para asignación de software
+### 9. Listar Programas sin token - Debe devolver 200
+GET {{baseUrl}}/programas
+
+### 10. Crear Programa (Admin) - Necesario para asignación de software
 POST {{baseUrl}}/programas
 Content-Type: application/json
 Authorization: Bearer {{tokenAdmin}}
@@ -167,7 +167,7 @@ Authorization: Bearer {{tokenAdmin}}
 ### PRUEBAS DE ACCESO (401 / 403)
 ### ==========================================
 
-### 14. Acceso sin token - Debe devolver 401
+### 14. Listar salones sin token - Debe devolver 200
 GET {{baseUrl}}/salones
 
 ### 15. Usuario con rol Docente intenta crear equipo - Debe devolver 403
