@@ -40,11 +40,38 @@ POST {{baseUrl}}/register
 Content-Type: application/json
 
 {
-    "nombre": "Juan",
-    "apellido": "Pérez",
-    "correo": "juan.perez@udl.edu.mx",
+    "nombre": "maestro",
+    "apellido": "docente",
+    "correo": "docente@udl.edu.mx",
     "password": "password123",
     "rol": "DOCENTE"
+}
+
+### REgistrar un Administrador de Plantel
+# Debería devolver 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "nombre": "Encargado",
+    "apellido": "admin plantel",
+    "correo": "encargado@udl.edu.mx",
+    "password": "password123",
+    "rol": "ADMIN_PLANTEL",
+    "id_plantel_asignado": 2
+}
+
+### Registrar un Alumno
+# Debería devolver 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "nombre": "estudiante",
+    "apellido": "alumno",
+    "correo": "alumno@udl.edu.mx",
+    "password": "password123",
+    "rol": "ALUMNO"
 }
 
 ### ==========================================
@@ -69,11 +96,16 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-    "correo": "juan.perez@udl.edu.mx",
+    "correo": "docente@udl.edu.mx",
     "password": "password123"
 }
 
-### 6. Login - Contraseña incorrecta
+### 6. Listar todos los usuarios (Admin)
+# Debería devolver 200 OK con el listado de usuarios
+GET {{baseUrl}}/users
+Authorization: Bearer {{tokenAdmin}}
+
+### 7. Login - Contraseña incorrecta
 # Debería devolver 401 Unauthorized
 POST {{baseUrl}}/login
 Content-Type: application/json

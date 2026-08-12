@@ -1,6 +1,7 @@
 from flask import Flask
 from config import Config
 from app.extensions import db
+from app.utils.db_init import init_db
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -19,8 +20,7 @@ def create_app(config_class=Config):
 
     # Crear tablas en el primer contexto
     with app.app_context():
-        from app.models.plantel import Plantel
-        from app.models.usuario import Usuario
-        db.create_all()
+        # Crear esquemas y luego todas las tablas
+        init_db(app, db)
 
     return app

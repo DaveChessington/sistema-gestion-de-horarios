@@ -33,7 +33,7 @@ class Usuario(db.Model):
     activo = db.Column(db.Boolean, default=True, nullable=False)
     
     # Llave foránea hacia planteles
-    id_plantel_asignado = db.Column(db.Integer, db.ForeignKey('planteles.id'), nullable=True)
+    id_plantel_asignado = db.Column(db.Integer, nullable=True)
 
     def set_password(self, password):
         """Genera el hash de la contraseña y lo almacena."""

@@ -3,6 +3,7 @@ import os
 class Config:
     # Llave secreta para JWT o sesiones
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'super-secret-key-udl'
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or SECRET_KEY
 
     # Configuración de base de datos PostgreSQL
     db_url = os.environ.get('DATABASE_URL')
@@ -17,3 +18,4 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    CATALOG_API_BASE_URL = os.environ.get('CATALOG_API_BASE_URL') or 'http://127.0.0.1:5002/api/v1'

@@ -1,0 +1,815 @@
+ 
+Universidad de León
+LICENCIATURA EN COMPUTACIÓN
+“Sistema de Administración y Gestión de Horarios Universidad de León”
+Trabajo de la materia de:
+Desarrollo de Manejadores y Utilerías
+Presenta:
+Aldo David Amaro Chávez
+Jorge Iván García Piña
+David Adame Vázquez
+Grupo:
+901-9
+Catedrático:
+Ing. Alejandro Montes Moreno
+Contenido
+INTRODUCCIÓN2
+1.Planificación, Análisis y requerimientos2
+1.1.Actividad Empresarial2
+1.2.Análisis de la Situación Actual y Definición del Problema2
+1.3.Objetivo y alcance del proyecto2
+1.4.Requerimientos3
+1.4.1.Requerimientos Funcionales3
+1.4.2.Requerimientos No Funcionales (Atributos de Calidad)9
+1.5.Estudio de Factibilidad9
+1.5.1.Factibilidad Técnica9
+1.5.2.Factibilidad Operativa10
+1.5.3.Factibilidad Económica / Cronograma10
+2.Diseño e Implementación10
+2.1.Propuesta10
+Vista General de la Arquitectura (Overview)10
+Tech Stack11
+Descomposición de Microservicios Propositiva12
+Sprint 1: Base de Dominio y Núcleo de Disponibilidad (7 días hábiles de desarrollo)12
+INTRODUCCIÓN
+La Universidad León, como institución comprometida con la excelencia académica y el desarrollo integral de sus estudiantes, reconoce la importancia de optimizar sus procesos administrativos para garantizar una operación eficiente y segura. En este contexto, se ha identificado una problemática crítica en la gestión de inventario de los recursos materiales distribuidos en sus distintos planteles y departamentos. Actualmente, la. Esta situación ha generado inconsistencias y dificultades en la operación de los centros de cómputo día a día. Este proyecto busca fortalecer la administración institucional, mejorar la transparencia en la gestión de los centros de cómputo y contribuir al crecimiento organizacional de la Universidad de León mediante soluciones tecnológicas innovadoras.
+Planificación, Análisis y requerimientos
+Actividad Empresarial
+La Universidad de León es una institución educativa cuya actividad empresarial principal es la prestación de servicios académicos orientados a la formación profesional y al desarrollo del conocimiento. Su función principal es la enseñanza, a través de la oferta de programas de licenciatura, posgrado, con el objetivo de contribuir al crecimiento académico y profesional de sus estudiantes.
+Análisis de la Situación Actual y Definición del Problema
+La universidad cuenta con una red de planteles académicos que albergan infraestructura especializada, como salas de cómputo y laboratorios de simulación equipados con recursos tecnológicos específicos (licencias de software, hardware especializado, equipos de soporte). La gestión actual de la disponibilidad y asignación de estos espacios se realiza mediante procesos descentralizados, manuales y asíncronos (hojas de cálculo aisladas y comunicaciones por correo electrónico), careciendo de una lógica de negocio unificada y de un control de concurrencia estricto.
+Algunos departamentos de la institución educativa se enfrentan a problemas críticos de orden y de gestión de horarios en espacios como centro de cómputo y laboratorios de simulación, pues el mecanismo de apartado de salones es ineficiente y da pie a traslapes de horarios y malentendidos. Otro factor muy importante a considerar además de las horas fijas que se aparta al inicio de cada cuatrimestre, las horas que quedan libres o disponibles se pueden prestar a otros maestros temporalmente para actividades especiales, clases o eventos especiales, por lo que también es necesario considerar estos factores, a la hora del apartado de salas. La ineficiencia operativa es clara pues no se cuenta con ningún tipo de sistema de auditoría de horarios, únicamente se manejan herramientas demasiado básicas y limitadas.
+Declaración del Problema: La institución educativa sufre de degradación operativa y conflictos de concurrencia debido a una gestión descentralizada y no auditable de sus espacios físicos (centros de cómputo y laboratorios). La coexistencia de dos modelos de reserva —Asignación Fija Cuatrimestral y Reserva Volátil Temporal— sobre un mismo recurso físico, sin un motor de validación atómica, genera traslapes de horarios, subutilización de infraestructura y falta de trazabilidad en la toma de decisiones.
+La Universidad de León ha encomendado a la firma desarrolladora ADP Software Solutions el diseño, arquitectura e implementación del 'Sistema de Administración y Gestión de Horarios'. El equipo de consultores de ADP Software Solutions (compuesto por A. Amaro, J. García y D. Vázquez) será responsable de la entrega del MVP en un esquema de 11 semanas.
+Objetivo y alcance del proyecto
+Construir un sistema que permita la administración y gestión de salas y laboratorios en cada plantel de la universidad, que sea accesible a coordinadores, y que permita consultar disponibilidad tanto a alumnos y a maestros, con el principal objetivo de reemplazar el registro de horas a través de métodos manuales en hojas de Excel y que funcione en tiempo real implementando concurrencia y responsividad
+En otras palabras gestión de inventario de salas, motor de reservas con validación de conflictos y dashboard de ocupación para el Coordinador.
+El sistema automatizará el ciclo de vida completo de las reservas de espacios, erradicando los procesos manuales basados en hojas de cálculo e implementando un motor de resolución de conflictos en tiempo real que garantice la consistencia transaccional ante accesos concurrentes.
+Alcance del Sistema 
+Módulo de Inventario de Infraestructura: Registro jerárquico de Planteles →Salas/Laboratorios→Recursos/Equipamiento.
+Motor de Reservas Atómico: Sistema de apartado para horarios fijos (cuatrimestrales) y volátiles (eventos temporales) con bloqueo de colisiones.
+Dashboard de Ocupación en Tiempo Real: Panel analítico para Coordinadores con métricas de uso, estado actual de las salas y aprobaciones pendientes.
+Motor de Búsqueda y Disponibilidad: Interfaz de consulta pública o autenticada para que maestros y alumnos verifiquen la disponibilidad de espacios sin modificar datos.
+Sistema de Auditoría (Audit Trail): Registro inmutable de quién, cuándo y desde dónde se creó, modificó o canceló una reserva.
+Funcionalidades DENTRO del Alcance
+Funcionalidades FUERA del Alcance
+Justificación Técnica de la Exclusión
+Autenticación y RBAC Core
+Registro e inicio de sesión seguro (bcrypt) para 4 roles: Administrador, Encargado, Docente y Alumno.
+Autenticación de Terceros y OAuth2
+Integración con Google Workspace o Microsoft Azure AD institucional.
+Complejidad de integración externa: Configurar flujos OAuth y gestionar redirecciones añade sobrecarga de configuración que distrae del desarrollo del motor de asignación principal en un equipo de 3 personas.
+Motor de Asignación Automática
+Procesamiento síncrono de solicitudes recurrentes/temporales usando colas FIFO y matriz de tiempos según la prioridad del evento.
+Algoritmos de Optimización Avanzada
+Reubicación inteligente y automática de eventos ya confirmados para "hacer espacio" a nuevas solicitudes de mayor prioridad.
+Riesgo de consistencia y concurrencia: Modificar reservas activas de forma automatizada genera condiciones de carrera (race conditions) complejas de resolver y testear en el tiempo disponible.
+Máquina de Estados de la Reserva
+Flujo estricto y controlado de transiciones: Pendiente, Confirmada, Rechazada, En curso, Finalizada, Cancelada.
+Historial de Auditoría Forense
+Guardado de snapshots de la base de datos por cada cambio de estado con firmas criptográficas.
+Sobrecarga de almacenamiento: Un log de auditoría simple en base de datos es suficiente para el MVP; la inmutabilidad y auditoría avanzada no aportan valor al core de negocio inmediato.
+CRUD de Entidades Base
+Gestión (Alta, Baja, Cambio) de Planteles, Salas, Recursos (Hardware/Software) y Usuarios.
+Módulo de Mantenimiento Predictivo
+Reportes automatizados de desgaste de hardware y bloqueos automáticos de salas por fallas técnicas.
+Fuera de los objetivos del Coordinador: El problema principal es la agenda y las colisiones; el mantenimiento de los equipos puede gestionarse de forma manual (operativa) durante la fase inicial.
+Consulta Pública y Visualización
+Calendario estático/dinámico en Web para la consulta pública de horarios por Plantel y Sala.
+Sincronización con Calendarios Externos
+Exportación e integración bidireccional en tiempo real con Google Calendar o iCal.
+Latencia y manejo de API externa: La sincronización externa introduce problemas de red, cuotas de API y manejo de webhooks que desviarían el enfoque del backend del sistema.
+Sistema de Notificaciones Internas
+Alertas dentro de la plataforma (o websockets simples) sobre cambios de estado de las peticiones para Docentes y Encargados.
+Notificaciones Omnicanal (SMS / WhatsApp)
+Integración con servicios de mensajería externa como Twilio.
+Costo y complejidad de infraestructura: Requiere pasarelas de pago, tokens de acceso y manejo de fallas de entrega externas, inviable para los tiempos de desarrollo asignados.
+Requerimientos
+Requerimientos Funcionales 
+A continuación, se especifican los requerimientos necesarios de aceptación del sistema:
+RF-01: Registro y Cifrado de Credenciales de Usuario
+Descripción: El sistema debe permitir el registro de usuarios institucionales cifrando la contraseña mediante algoritmos criptográficos asíncronos antes de su persistencia en la base de datos. 
+Criterios de Aceptación (CA):
+CA-01 (Caso Normal): Dado que un usuario ingresa una contraseña en texto plano, cuando el sistema procese el registro, entonces debe almacenar un hash utilizando bcrypt (mínimo 12 rounds) en el campo password de la tabla usuario. 
+CA-02 (Caso de Error): Dado un correo electrónico que ya existe en la tabla usuario, cuando se intente enviar el registro, entonces el sistema debe denegar la inserción y mostrar un mensaje de error controlado. 
+RF-02: Control de Accesos basado en Roles (RBAC)
+Descripción: El sistema debe restringir los endpoints y vistas del sistema dependiendo del id_rol asignado al usuario. 
+Criterios de Aceptación (CA):
+CA-03: Dado un usuario con id_rol equivalente a "Docente", cuando intente acceder a la administración de planteles, entonces el sistema debe revocar el acceso y redirigirlo a su vista de calendario de salas libres. 
+RF-03: Alta y Baja Lógica de Infraestructura Física
+Descripción: El sistema debe permitir al Administrador realizar operaciones de creación, modificación y desactivación (baja lógica) de planteles y salones. 
+Criterios de Aceptación (CA):
+CA-04 (Caso Límite): Dado un registro de salon nuevo, cuando la capacidad ingresada sea menor o igual a cero, entonces el sistema debe impedir la inserción y notificar un error de datos inválidos. 
+RF-04: Gestión de Inventario Tecnológico (Hardware y Software)
+Descripción: El sistema debe permitir al Encargado asociar equipos a salones específicos y gestionar los programas instalados en ellos a través de la relación de muchos a muchos. 
+Criterios de Aceptación (CA):
+CA-05: Dado un software que se desinstala de un lote de computadoras, cuando el encargado lo registre, entonces se debe eliminar el registro correspondiente de la tabla software asociando el id_equipo y el id_programa.
+RF-05: Interfaz de Calendario Dinámico y Consulta Pública
+Descripción: El sistema debe renderizar un componente visual interactivo que muestre de forma pública la disponibilidad real de salones por horas exactas. 
+Criterios de Aceptación (CA):
+CA-06: Dado un salón seleccionado, cuando se renderice la vista, entonces el sistema debe consultar las horas en la tabla evento y sombrear/bloquear las celdas de tiempo que tengan el estado 'APARTADA'.
+RF-06: Procesamiento e Inserción Automática de Peticiones
+Descripción: El sistema debe evaluar de forma síncrona e inmediata las solicitudes de los maestros mediante una consulta de exclusión de rangos de tiempo, asignando el estado final sin intervención manual. 
+Criterios de Aceptación (CA):
+CA-07 (Caso Normal): Dado que un docente selecciona una sala vacía en su horario deseado, cuando envíe la solicitud, entonces el sistema debe insertar una fila en la tabla peticion con estado = 'APARTADA' y replicar el registro de forma inmediata en la tabla evento. 
+RF-07: Resolución Automática de Colisiones por Prioridad y Cola FIFO
+Descripción: El sistema debe resolver conflictos de colisión de horarios evaluando el campo prioridad de la tabla tipo_evento y la fecha de creación de la petición. 
+Criterios de Aceptación (CA):
+CA-08 (Caso de Desplazamiento): Dado que una petición de mayor prioridad (ej. Clase Regular, prioridad alta) choca en hora_inicio y hora_fin con un evento ya agendado de menor prioridad (ej. Club de alumnos), cuando se procese la transacción, entonces el sistema debe cambiar el estado del evento antiguo a 'CANCELADA' e insertar el nuevo evento como 'APARTADA'. 
+CA-09 (Caso FIFO): Dado que dos peticiones cuentan exactamente con la misma prioridad y compiten por el mismo espacio/tiempo, cuando entren al motor, entonces el sistema confirmará la petición que tenga la fecha_solicitud más antigua y rechazará de inmediato la segunda.
+Casos de Uso
+Solicitar Apartado de Sala (Docente / Alumno)
+Descripción: El Docente o Alumno registra una solicitud de reserva en el sistema.
+El usuario interactúa con un Calendario de Disponibilidad. Al seleccionar un espacio libre, el sistema procesa la solicitud y le confirma en pantalla de forma inmediata si su reserva fue exitosa (APARTADA) o si fue denegada.
+Precondición: El usuario debe estar autenticado y el salón debe estar en estado DISPONIBLE.
+Evaluar Petición de Reserva (Encargado de Plantel)
+Descripción: El encargado entra al sistema para ver el historial de las asignaciones automáticas o para forzar una reasignación manual si la dirección de la escuela se lo solicita por un evento extraordinario.
+Postcondición: Si aprueba, la petición cambia su campo estado a "APARTADA" y se inserta el registro correspondiente en la tabla evento vinculando el id_grupo y la id_materia. Si rechaza, se actualiza el campo observaciones con el motivo del rechazo.
+Notificar Cambio de Estado (Sistema)
+Descripción: El sistema alerta a los actores sobre los movimientos de las reservas.
+El Encargado recibe una notificación automática cuando se inserta una nueva fila en peticion con estado "EN REVISIÓN".
+Postcondición: El Docente/Alumno recibe una notificación cuando el campo estado en peticion cambia a "APARTADA", "RECHAZADA" o "REASIGNADA".
+Consultar Agenda Pública de Horarios (Cualquier Usuario / Público)
+Descripción: Acceso libre para revisar la disponibilidad de las salas.
+Endpoint público (sin token de autenticación) que realiza un SELECT sobre las tablas evento, salon y grupo, filtrando por id_plantel. Muestra la cuadrícula de horarios asignados de manera pública.
+Consultar Horario Personal Privado (Docente / Alumno)
+Descripción: El usuario accede para ver exclusivamente sus compromisos asignados.
+El sistema filtra la tabla evento cruzando el id_usuario a través de la tabla grupo (para alumnos) o directamente por el registro de la materia (para docentes), mostrando salón, grupo y hora exacta.
+Precondición: Requiere autenticación por parte del alumno o docente. 
+Gestionar Infraestructura Global (Administrador)
+Descripción: Control maestro sobre los catálogos del sistema en todos los planteles.
+Permite realizar operaciones CRUD completas en las tablas plantel, salon y equipo. Puede modificar el campo capacidad de un salón o cambiar el estado de un plantel completo a inactivo (baja lógica).
+Gestionar Recursos y Mantenimiento Local (Encargado de Plantel)
+Descripción: Control de hardware y software restringido a su plantel asignado.
+ El Encargado no puede crear salones, pero sí puede interactuar con las tablas equipo, software y programa. Está facultado para dar de baja un equipo (cambiar estado a "INACTIVO"), registrar cambios de hardware o asociar un nuevo software a un equipo.
+Historias de Usuario
+Para garantizar la transición limpia desde Excel a una plataforma web responsiva, dividimos las necesidades en los tres perfiles de usuario identificados.
+Historia de Usuario (HU-01): Como Administrador, quiero registrar usuarios en el sistema con sus datos esenciales (nombre, email, id_rol), para mapear las prioridades de los eventos según el tipo de usuario.
+Historia de Usuario (HU-02): Como Docente/Encargado, quiero iniciar sesión de forma segura, para visualizar las herramientas específicas autorizadas para mi rol.
+Historia de Usuario (HU-03): Como Administrador, quiero registrar salones amarrados a un plantel específico con su capacidad física de aforo, para alimentar los filtros del buscador del calendario de los docentes.
+Historia de Usuario (HU-04): Como Encargado, quiero registrar cambios de hardware o software en la tabla romper relaciones software, para mantener actualizado el catálogo de herramientas disponibles en el laboratorio.
+Historia de Usuario (HU-05): Como Cualquier Usuario, quiero acceder a la agenda de clases para consulta pública de horarios, para saber qué salones están libres sin necesidad de iniciar sesión.
+Historia de Usuario (HU-07): Como Sistema, quiero evaluar las solicitudes entrantes concurrentes contra las reservas existentes, para desplazar automáticamente los eventos de menor prioridad utilizando una estructura de cola FIFO.
+Requerimientos No Funcionales (Atributos de Calidad)
+Estos requerimientos definen las restricciones técnicas bajo las cuales operará el sistema para cumplir con la promesa de "tiempo real y concurrencia".
+RNF-01: Consistencia Transaccional (Concurrencia): El sistema debe garantizar el principio de aislamiento en la base de datos. Ante dos peticiones HTTP simultáneas sobre el mismo Slot_Horario y Fecha, el motor de la base de datos debe rechazar la segunda petición mediante un mecanismo de Optimistic Locking (Manejo de versiones) o Pessimistic Locking (SELECT FOR UPDATE), retornando un código de estado 409 Conflict.
+RNF-02: Reactividad (Tiempo Real): La actualización de las cuadrículas de disponibilidad en los Dashboards de los Coordinadores debe realizarse en un tiempo menor a 1.5 sesgundos tras la confirmación o cancelación de una reserva, utilizando tecnologías de transporte eficientes como Server-Sent Events (SSE) o WebSockets.
+RNF-03: Responsividad (Adaptabilidad de Interfaz): La interfaz de usuario debe cumplir con un diseño fluido adaptativo (breakpoints estándar para Mobile, Tablet y Desktop). El tiempo de carga de la vista del calendario en dispositivos móviles bajo redes 4G/LTE no debe exceder los 2.5 segundos.
+RNF-04: Seguridad y Aislamiento (Multi-Tenancy Jerárquico): El sistema implementará un Control de Acceso Basado en Roles (RBAC). Un usuario con rol "Coordinador" adscrito al Plantel A no tendrá permisos de escritura (crear, editar, cancelar) sobre los recursos o reservas del Plantel B, a menos que su usuario posea explícitamente un rol jerárquico de "Administrador General".
+Matriz de trazabilidad
+ID 
+ Requerimiento
+Historia de Usuario Relacionada
+Criterio de Aceptación
+Prueba Sugerida
+Módulo Probable
+RF-01 
+Registro y Cifrado de Credenciales de Usuario. 
+HU-01: Registro de usuarios según tipo . DOCXHU-02: Inicio de sesión seguro. 
+CA-01: Uso de hash bcrypt (mínimo 12 rounds) en campo password . 
+CA-02: Denegación de inserción si el correo ya existe. 
+Prueba Unitaria: Verificar que el string de contraseña en BD empiece con el prefijo de hash bcrypt e intentar registrar un email duplicado.
+Autenticación y RBAC Core. 
+RF-02 
+Control de Accesos basado en Roles (RBAC). 
+HU-02: Iniciar sesión para ver herramientas autorizadas por rol. 
+CA-03: Rol "Docente" redirige a vista de salas libres si intenta acceder a administración de planteles. 
+Prueba de Integración / Seguridad: Realizar una petición HTTP GET con token de rol "Docente" al endpoint protegido de planteles y validar redirección/código 403.
+Autenticación y RBAC Core. 
+RF-03 
+Alta y Baja Lógica de Infraestructura Física. 
+HU-03: Registro de salones amarrados a plantel con su capacidad. 
+CA-04: Capacidad ≤ 0 impide la inserción y notifica error de datos inválidos. 
+Prueba de Límite (Boundary Test): Intentar registrar un salón enviando un payload con capacidad: 0 y verificar el rechazo de la API.
+CRUD de Entidades Base / Infraestructura
+RF-04 
+Gestión de Inventario Tecnológico (Hardware/Software). 
+HU-04: Registro de cambios de hardware o software en tabla romper relaciones. 
+CA-05: Al desinstalar software, eliminar registro de tabla software asociando id_equipo e id_programa. 
+Prueba Unitaria de Base de Datos: Ejecutar el flujo de desinstalación y verificar que el registro de la relación muchos a muchos se elimine físicamente.
+CRUD de Entidades Base / Inventario Tecnológico. 
+RF-05 
+Interfaz de Calendario Dinámico y Consulta Pública. 
+HU-05: Consulta pública de horarios sin iniciar sesión. 
+CA-06: Consultar horas en tabla evento y sombrear/bloquear celdas con estado 'APARTADA'. 
+Prueba de Interfaz (UI Test): Cargar calendario público de un salón específico y comprobar que los bloques con registros 'APARTADA' no sean interactivos.
+Consulta Pública y Visualización. 
+RF-06 
+Procesamiento e Inserción Automática de Peticiones. 
+Ninguna historia cubre explícitamente el flujo normal del docente sin colisiones (Ver Reporte).
+CA-07: Docente selecciona sala vacía, se inserta en tabla peticion con estado = 'APARTADA' y se replica en tabla evento. 
+Prueba de Integración End-to-End: Enviar una solicitud de espacio libre como docente y verificar inserción síncrona en las tablas peticion y evento.
+Motor de Asignación Automática / Reservas. 
+RF-07 
+Resolución Automática de Colisiones por Prioridad y Cola FIFO. 
+HU-07: Evaluar solicitudes concurrentes contra reservas existentes para desplazar por menor prioridad usando FIFO. 
+CA-08: Petición de mayor prioridad cancela evento antiguo de menor prioridad e inserta el nuevo como 'APARTADA' . 
+CA-09: Misma prioridad en colisión, se confirma la fecha_solicitud más antigua (FIFO) y rechaza la segunda. 
+Prueba de Concurrencia (Race Conditions): Simular envío simultáneo de dos peticiones concurrentes con misma y diferente prioridad; verificar la correcta aplicación de las reglas FIFO y Prioridad.
+Motor de Asignación Automática / Reservas. 
+Estudio de Factibilidad
+Para asegurar el éxito antes de asignar tareas en el Sprint 1, debemos auditar las tres dimensiones de la factibilidad del proyecto.
+Factibilidad Técnica
+Infraestructura Existente: Se debe evaluar si los servidores actuales de la universidad soportan arquitecturas dirigidas por eventos (necesarias para el tiempo real, como NodeJS, Go, o backends con soporte nativo de WebSockets) o si están limitados a servidores compartidos de tipo PHP/Apache tradicional.
+Capacidad del Equipo: El desarrollo de un motor con manejo de concurrencia avanzada requiere que los desarrolladores dominen transacciones SQL, niveles de aislamiento (Isolation Levels) y manejo de estados asíncronos en el Frontend (ej. React, Vue).
+Veredicto: Viable, siempre y cuando se elija un stack moderno (ej. PostgreSQL como base de datos por su robusto manejo de bloqueos transaccionales y concurrencia ACID, junto a un backend capaz de sostener conexiones persistentes).
+Factibilidad Operativa
+Transición Digital (El Factor Humano): El sistema sustituye directamente a archivos de Excel compartidos. La interfaz del Coordinador debe emular visualmente la comodidad de una agenda o calendario (tipo Google Calendar) para reducir la curva de aprendizaje y la resistencia al cambio.
+Flujo de Trabajo Celular: El flujo de validación no debe burocratizar el apartado. Si un maestro solicita una reserva para el mismo día, el sistema debe notificar al coordinador de inmediato para evitar que el espacio quede vacío por falta de aprobación humana.
+Veredicto: Viable, condicionada a que la UI de administración sea intuitiva y automatice las aprobaciones bajo ciertas reglas preestablecidas.
+Factibilidad Económica / Cronograma
+Costo de Desarrollo vs Pérdida Operativa: Los traslapes de horarios actuales cuestan horas-hombre de coordinadores resolviendo malentendidos y subutilización de laboratorios equipados con licencias costosas. La automatización justifica la inversión del software.
+Veredicto: Altamente Viable, debido al alto Retorno de Inversión (ROI) derivado de la optimización del uso de la infraestructura física de los planteles.
+Diseño e Implementación
+Propuesta
+Vista General de la Arquitectura (Overview)
+El sistema se regirá bajo un patrón de Microservicios Desacoplados, diseñado para garantizar la alta disponibilidad, el aislamiento de fallos y la escalabilidad independiente de los módulos críticos (como el motor de reservas y el sistema de notificaciones).
+Cada microservicio es dueño absoluto de su esquema de base de datos (lógica o físicamente). Ningún servicio puede acceder directamente a la base de datos de otro; toda comunicación se realiza mediante contratos de API bien definidos.
+Comunicación Híbrida:
+Sincrónica (HTTP/REST): Para operaciones inmediatas donde el cliente requiere confirmación en tiempo real (ej. validación de disponibilidad de un salón).
+Asincrónica (Event-Driven): Para procesos que no deben bloquear el hilo principal (ej. auditoría, envío de correos tras confirmación).
+Con respecto al frontend se diseña bajo el supuesto de un consumo vía API (RESTful), permitiendo que la capa de presentación (sea Flask con Jinja2 o un SPA como Angular) actúe estrictamente como un cliente del backend.
+Módulo 1: Gestión de Identidades y Accesos (IAM)
+Control de Acceso Basado en Roles: El sistema debe restringir el acceso a las interfaces y endpoints de la API basándose en cinco roles estrictos: Alumno, Docente, Encargado de Plantel, Administrador y Superusuario.
+Segregación de Datos por Plantel: El sistema debe garantizar que el rol de Encargado solo pueda visualizar, editar y gestionar los horarios y salas pertenecientes al plantel que tiene asignado.
+Responsabilidad: Autenticación centralizada, emisión de tokens criptográficos (JWT), validación de privilegios mediante RBAC (Administrador, Coordinador, Docente, Alumno) y el aislamiento de datos por plantel (Multi-tenancy lógico).
+Entradas: Credenciales de acceso (email, password_hash).
+Token JWT (para validación/renovación de sesión en el API Gateway).
+Salidas: Clave de sesión única encapsulada en JWT firmado (contiene: id_usuario, rol, id_plantel).
+Respuestas booleanas de autorización para el API Gateway.
+Módulo 2: Motor de Reservas y Gestión de Estados
+Reglas de Prioridad de Reservas: Al procesar solicitudes concurrentes, el sistema debe calcular un puntaje de prioridad basado en el Rango del Usuario (Docente > Alumno) y el Tipo de Evento (Clase Curricular > Evento Institucional > Sesión de Estudio).
+Sistema de Notificaciones e Historial: El sistema debe notificar en tiempo real (vía WebSockets/SSE y correo electrónico) al Encargado cuando entre una petición, y al Solicitante cuando su petición cambie de estado.
+Ciclo de Vida de una Petición: El sistema debe controlar el estado de cada solicitud de apartado de sala de forma determinista. 
+Responsabilidad: Orquestar el ciclo de vida estricto de una petición. Evaluar colisiones de horarios mediante bloqueos optimistas/pesimistas en la base de datos, aplicar la regla de prioridad ante traslapes y disparar el historial/notificaciones reactivas.
+Entradas: Solicitud de apartado (id_sala, id_docente, bloque_horario, fecha, prioridad_evento).
+Payload de mutación de estado (id_reserva, nuevo_estado: Confirmada/Cancelada).
+Salidas: Transmisión del estado del slot físico (Éxito 201 / Conflicto 409).
+Payload de evento para el historial inmutable.
+Disparador de alerta de notificación.
+Toda reserva deberá transicionar estrictamente entre los siguientes estados:
+Estado de reservas
+EN REVISIÓN: Estado inicial cuando un Alumno o Docente envía una solicitud. el sistema procesa la solicitud en milisegundos. Si el calendario muestra la sala libre y no hay un choque de mayor prioridad, el estado pasa directamente a APARTADA
+APARTADA (Confirmada): Cuando se aprueba una solicitud dentro del sistema. Estado asignado si el espacio está libre o si la solicitud entrante desplaza a una de menor prioridad según las reglas FIFO.
+RECHAZADA: Cuando se deniega una solicitud (requiere registrar un motivo). Estado asignado automáticamente si la sala cuenta con un evento de igual o mayor prioridad en el mismo rango de tiempo.
+REASIGNADA: Cuando se cambia la sala o el horario original de la petición debido a un conflicto de prioridad. Cuando el sistema optimiza los espacios físicos por cambios en la planeación curricular.
+EN CURSO: Mientras la sala está siendo ocupada
+FINALIZADA: cuando se desocupa la sala
+Estructura de peticiones
+Nombre del evento (ej. Si es una clase se especificaría el nombre de la materia)
+Tipo de evento (ej.  Clase curricular, evento institucional)
+Fecha de realización de solicitud
+Fecha de apartado (ej. 19/05/2025)
+Horas (ej. 7 am-8 am)
+Grupos involucrados (ej. 901-9 ICO)
+No. de personas (ej. 20 personas)
+Ordenante (ej. Prof. Alejandro Montes Moreno)
+Descripción u observaciones opcionales (ej. Se especifica algún requerimiento adicional, como software o equipo de hardware en especificaciones necesarias)
+Tipos de eventos
+Clase Curricular (maestro)
+Evento Institucional (administrador, encargado)
+Conferencia (maestro, encargado)
+Taller (maestro, encargado)
+Sesión de Estudio (Grupal) (alumno)
+Practicas (alumno)
+Condiciones para ponderación y rating de prioridad
+Para que el sistema resuelva conflictos de forma automática cuando dos usuarios soliciten el mismo espacio al mismo tiempo, implementaremos una Matriz de Ponderación Estricta. El puntaje de prioridad (P) se calculará mediante la suma del peso del rol del usuario (U) y el peso del tipo de evento (E):
+P=U+E
+Tipo de Evento
+Peso del Evento (E)
+Roles Permitidos
+Peso del Rol (U)
+Puntaje de Prioridad Máximo (P)
+Clase Curricular
+50
+Docente
+40
+90
+Evento Institucional
+40
+Administrador, Encargado
+30
+70
+Conferencia / Taller
+30
+Docente, Administrador
+30
+60
+Sesión de Estudio (Grupal)
+10
+Alumno
+10
+20
+NOTA: Si dos peticiones empatan en el puntaje de prioridad P, el sistema aplicará el criterio First-In, First-Out (FIFO), otorgando el espacio a la petición que se haya registrado primero
+Módulo 3: Visualización de Horarios e Interfaz Pública
+Portal Público de Horarios: El sistema debe disponer de una sección web pública (sin requerir inicio de sesión) para la consulta de horarios vigentes, filtrable por Plantel y Grupo Académico.
+Portal Privado de Horarios: El sistema debe ofrecer un dashboard privado para Alumnos y Profesores que consolide exclusivamente su horario asignado de clases (Salón, Grupo, Materia y Hora exacta).
+Responsabilidad: Renderizar la cuadrícula de horarios en tiempo real tanto para el portal externo (público sin token, optimizado para consultas masivas) como para el cuadro privado de gestión de coordinadores.
+Entradas:Parámetros de filtrado (id_plantel, id_sala, dia_semana, turno).
+Eventos de actualización del Módulo 2 vía Server-Sent Events (SSE).
+Salidas: Matriz JSON estructurada para la vista de calendario (tiempo de respuesta < 300ms).
+Flujo de datos reactivo (Stream) para la actualización visual inmediata en la pantalla del usuario.
+Módulo 4: Administración de Catálogos e Ingesta de Datos (CRUDs)
+Panel de Control Maestro - Administrador: El sistema debe permitir al Administrador monitorear en tiempo real los movimientos de gestión, logs de auditoría y registro de horas de todos los planteles globalmente.
+Operaciones CRUD Globales: El sistema debe proveer interfaces administrativas para la creación, lectura, actualización y eliminación (lógica) de las siguientes entidades: Planteles, Salones, Estaciones de Trabajo, Grupos, Alumnos, Docentes, Encargados, Administradores y Bloques Horarios.
+Procesamiento de Datos: El sistema debe permitir al Administrador cargar archivos en formato .xlsx o .csv conteniendo la planeación del ciclo escolar (Materias, Docentes y Grupos). El sistema debe validar la estructura del archivo y pre-cargar las horas por grupo antes de la asignación de salones.
+Responsabilidad: Gestión global de las entidades del sistema (Planteles, Salas, Recursos tecnológicos de Hardware/Software) y el procesamiento batch/ingesta de datos iniciales del ciclo escolar.
+Entradas: * Peticiones CRUD estándar (JSON payloads para altas, bajas lógicas y modificaciones).
+Archivos de datos estructurados para ingesta masiva (ej. CSV/Excel de plantillas de salones).
+Salidas: * Confirmación de persistencia y estado de los recursos (activo: true/false para bajas lógicas).
+Catálogos maestros listos para ser consumidos/cacheados por los demás módulos.
+Tabla de Modulos
+Módulo
+Responsabilidad
+Entradas
+Salidas
+Requerimientos Relacionados
+Módulo 1: IAM
+Autenticación centralizada, control de accesos por roles (RBAC) y aislamiento de datos por plantel a nivel de token criptográfico.
+• Credenciales (email, password)
+• Tokens JWT para validación de rutas
+• JWT firmado conteniendo id_usuario, rol, id_plantel
+• Respuestas 401/403
+RF-01: Cifrado de credenciales.
+RF-02: Control de acceso basado en roles y segregación por plantel.
+Módulo 2: Motor de Reservas
+Core Transaccional. Orquestación del ciclo de vida de peticiones, bloqueo atómico de filas para evitar colisiones y aplicación de reglas de prioridad/FIFO.
+• Petición de reserva (id_sala, bloque, fecha, prioridad)
+• Mutación de estado
+• Confirmación de inserción (201 Created)
+• Error transaccional (409 Conflict)
+• Mensajes de eventos a RabbitMQ/Redis
+RF-06: Inserción automática de reservas.
+RF-07: Resolución de colisiones por prioridad/FIFO.
+Gobernanza del ciclo de vida de los estados.
+Módulo 3: Visualización e Interfaz Pública
+Renderizado asíncrono y reactivo de la cuadrícula de horarios. Sostiene la consulta masiva y el streaming en tiempo real a través de eventos en caché.
+• Filtros de visualización (id_plantel, id_sala, turno)
+• Stream de eventos desde RabbitMQ/Redis
+• Matriz JSON estructurada de la agenda
+• Conexión persistente Server-Sent Events (SSE) para UI
+RF-05: Calendario dinámico interactivo web.
+Cumplimiento de atributos de alta concurrencia y reactividad.
+Módulo 4: Administración de Catálogos
+Operaciones CRUD globales de la infraestructura y recursos de la universidad, procesamiento batch e ingesta asíncrona de datos escolares.
+• Payloads JSON de mutación física
+• Archivos estructurados para carga masiva (CSV/Excel)
+• Estado de persistencia de catálogos
+• Bajas lógicas (activo: false) para consistencia histórica
+RF-03: Baja lógica de infraestructura física.
+RF-04: Gestión de inventario de hardware y licencias de software asignadas.
+Relación requerimiento - módulo 
+ID
+Requerimiento
+Historia Relacionada
+Prueba Sugerida
+Módulo Responsable
+RF-01
+Cifrado de Credenciales:
+Uso obligatorio de algoritmos asíncronos para contraseñas.
+Yo como Administrador del sistema,
+Quiero que las contraseñas se almacenen cifradas de forma segura,
+Para evitar accesos no autorizados en caso de una fuga de datos.
+Prueba Unitaria de Hashing:
+Verificar mediante un script de prueba que al registrar un usuario, la contraseña guardada en la base de datos sea diferente al texto plano y que coincida con el algoritmo de verificación asíncrono bcrypt.
+Módulo 1: IAM
+(iam_service)
+RF-02
+Control de Acceso (RBAC):
+Segregación lógica por plantel y roles.
+Yo como Coordinador del Plantel León,
+Quiero acceder únicamente a la gestión de salones de mi plantel,
+Para evitar modificar o visualizar horarios de otros campus.
+Prueba de Integración (403 Forbidden):
+Inyectar un JWT perteneciente al Plantel Celaya e intentar realizar una consulta a las salas del Plantel León. El microservicio debe retornar de forma inmediata un código de estado HTTP 403.
+Módulo 1: IAM
+(iam_service)
+RF-03
+Baja Lógica de Infraestructura:
+Desactivar sin eliminar registros físicos.
+Yo como Coordinador de Universidad,
+Quiero dar de baja un laboratorio que entró en mantenimiento,
+Para que nadie pueda reservarlo temporalmente sin romper el historial de datos.
+Prueba de Persistencia (Soft Delete)
+Ejecutar un HTTP DELETE sobre el endpoint de un aula. Verificar en PostgreSQL que el registro mantenga su id, pero su columna booleana cambie a activo = false y que ya no se liste en búsquedas vigentes.
+Módulo 4: Catálogos
+(catalog_service)
+RF-04
+Inventario Tecnológico:
+Vincular hardware y software a salas.
+Yo como Docente de la materia,
+Quiero filtrar los laboratorios que tengan instaladas licencias de software específicas,
+Para asegurar que puedo impartir mi clase práctica adecuadamente.
+Prueba de API Funcional:
+Realizar una petición HTTP GET al catálogo filtrando por el parámetro software_id. Verificar que la respuesta JSON incluya únicamente los laboratorios que tienen mapeada dicha relación.
+Módulo 4: Catálogos
+(catalog_service)
+RF-05
+Calendario Dinámico:
+Renderizado de la cuadrícula interactiva.
+Yo como Alumno / Docente,
+Quiero visualizar la agenda pública de horarios actualizada,
+Para conocer la disponibilidad de los espacios de manera inmediata y sin iniciar sesión.
+Prueba de Carga de Interfaz Pública:
+Ejecutar una consulta masiva sin token de autenticación (Authorization Bearer) hacia el endpoint público y validar que devuelva la matriz de horarios en menos de 300ms utilizando la caché de Redis.
+Módulo 3: Visualización
+(schedule_service)
+RF-06
+Inserción Automática:
+Procesamiento de reserva en slot libre.
+Yo como Coordinador de Universidad,
+Quiero ingresar una solicitud de apartado en un horario vacío,
+Para que el sistema la registre de forma automática y asigne el estado de CONFIRMADA.
+Prueba de Transición de Estados:
+Enviar un payload de reserva válido vía HTTP POST. Verificar que el ciclo de vida se complete guardando la reserva con el estado enum CONFIRMADA e insertando la fila de auditoría.
+Módulo 2: Reservas
+(booking_service)
+RF-07
+Resolución de Colisiones:
+Aplicar prioridades jerárquicas y FIFO.
+Yo como Coordinador con un evento de alta prioridad,
+Quiero solicitar un salón ocupado por una clase regular,
+Para que el sistema desplace la clase previa y me otorgue el espacio de forma atómica.
+Prueba de Concurrencia (Race Conditions):
+Lanzar simultáneamente dos peticiones sobre el mismo slot con prioridades distintas utilizando SQLAlchemy (with_for_update()). Verificar que una sea procesada de forma exitosa y la otra reciba un HTTP 409 Conflict o active el desplazamiento asíncrono.
+Módulo 2: Reservas
+(booking_service)
+Tech Stack
+Para garantizar la mantenibilidad y mitigar la curva de aprendizaje del equipo, se ha estandarizado el ecosistema tecnológico en torno a herramientas robustas y con amplio soporte comunitario.
+Componentes del Ecosistema
+Componente
+Tecnología Seleccionada
+Justificación Técnica
+Lenguaje Base
+Python 3.11+
+Tipado estático opcional (typing), alto rendimiento en entornos asíncronos y madurez del ecosistema.
+Framework Backend
+FastAPI / Flask
+FastAPI para microservicios de alto tráfico (Reservas/API Gateway) por su soporte nativo de asyncio y autogeneración de OpenAPI. Flask para servicios utilitarios internos si el equipo cuenta con código base.
+Persistencia Relacional
+PostgreSQL 15+
+Soporte nativo para exclusión mutua de rangos de tiempo (tsrange, EXCLUDE WHERE), crítico para el algoritmo de colisiones, y excelente manejo de concurrencia (MVCC).
+ORMs & Migraciones
+SQLAlchemy 2.0 + Alembic
+Patrón Data Mapper para desacoplar los modelos de dominio de las tablas de la BD. Alembic garantiza migraciones deterministas y versionadas.
+Mensajería / Eventos
+RabbitMQ o Redis Pub/Sub
+Broker ligero para la comunicación asíncrona entre el microservicio de reservas y el sistema de notificaciones/auditoría.
+Se propone también el uso de herramientas como Docker para la creación de contenedores que faciliten el manejo de las aplicaciones de backend y frontend.
+Con respecto de la implementación como tal del sistema se siguen considerando algunas alternativas que se ajusten al presupuesto destinado al proyecto, en primer lugar se encuentran 2 plataformas PaaS como lo son Render o pythonanywhere, y también existe otra alternativa como la implementación del sistema a través un SaaS o IaaS como lo son las instancias EC2 de AWS y Buckets S3 para el despliegue.
+Como algunos complementos para el desarrollo de la aplicación se encuentran editores de código como lo son Visual Studio Code de Microsoft y Antigravity de Google, con sus respectivas IAs integradas (copilot y Gemini o Claude). De igual manera se hará uso de agentes entrenados  (Gems) con documentación de proyectos anteriores para llevar a cabo la documentación detallada y técnica del proyecto, también se plantea el uso de herramientas como Codex de OpenAI o Gemini CLI (este cuenta con una gran ventaja sobre Codex puesto que al ser parte de Gemini se puede integrar fácilmente en el editor de Google al ya tener integrada modelos de IA de Gemini lo que permite trabajar con un contexto del proyecto más claro) 
+Otras herramientas de apoyo para el desarrollo del proyecto en equipo se encuentran algunas herramientas de diseño de diagramas e interfaces como lo son Figma y Drawio, también Git y GitHub para el manejo de versiones y repositorios, Codespaces para trabajo colaborativo en tiempo, y finalmente Jira manejando una metodología Scrum, para la asignación de fechas tareas y roles dentro de los sprints. 
+Estrcutura inicial de archivos
+universidad-horarios-backend/
+├── docker-compose.yml               # Levanta PostgreSQL, RabbitMQ/Redis y los servicios locales
+├── shared_core/                     # Paquete interno compartido (no duplica código)
+│   ├── __init__.py
+│   ├── auth/
+│   │   └── security.py              # Hashing de contraseñas (passlib/bcrypt) y decodificación JWT
+│   └── schemas/
+│       └── events.py                # Modelos de Pydantic compartidos para mensajes (Eventos)
+│
+└── services/                        # Directorio de Microservicios Independientes
+    │
+    ├── iam_service/                 # MÓDULO 1: IAM
+    │   ├── src/
+    │   │   ├── main.py              # Instancia de FastAPI
+    │   │   ├── config.py            # Variables de entorno
+    │   │   ├── database.py          # Conexión local a la DB de Usuarios
+    │   │   ├── models.py            # Tablas SQLAlchemy (Usuario, Rol)
+    │   │   ├── routes/              # Endpoints de login/registro
+    │   │   └── services/            # Lógica de negocio (JWT con claims de Plantel)
+    │   ├── alembic/                 # Migraciones de base de datos individuales
+    │   ├── alembic.ini
+    │   └── Dockerfile
+    │
+    ├── booking_service/             # MÓDULO 2: MOTOR DE RESERVAS (El Core del Sistema)
+    │   ├── src/
+    │   │   ├── main.py              # Instancia de FastAPI
+    │   │   ├── database.py          # Aislamiento transaccional estricto (AsyncSession)
+    │   │   ├── models.py            # Reserva, EstadoReserva (SQLAlchemy Enums)
+    │   │   ├── engine/
+    │   │   │   ├── collision.py     # Algoritmo puro de detección de solapamientos / Prioridades
+    │   │   │   └── state_machine.py # Lógica de transición de estados de la reserva
+    │   │   ├── events/
+    │   │   │   └── publisher.py     # Publicador de eventos hacia RabbitMQ/Redis
+    │   │   └── routes/              # Endpoints de solicitudes de apartado
+    │   ├── alembic/
+    │   └── Dockerfile
+    │
+    ├── schedule_service/            # MÓDULO 3: VISUALIZACIÓN EN TIEMPO REAL
+    │   ├── src/
+    │   │   ├── main.py              # Instancia de FastAPI (Optimizado para Server-Sent Events - SSE)
+    │   │   ├── cache.py             # Lecturas ultra rápidas desde Redis
+    │   │   ├── events/
+    │   │   │   └── consumer.py      # Escucha RabbitMQ/Redis para actualizar el calendario sin tocar la DB central
+    │   │   └── routes/
+    │   │       └── public_view.py   # Endpoint público sin necesidad de token JWT
+    │   └── Dockerfile
+    │
+    └── catalog_service/             # MÓDULO 4: CRUDs E INGESTA
+        ├── src/
+        │   ├── main.py
+        │   ├── database.py          # DB de Planteles, Salas y Recursos
+        │   ├── models.py            # Plantel, Sala, Recurso (Hardware/Software)
+        │   ├── routes/
+        │   └── services/
+        │       └── parser.py        # Procesamiento en batch/asíncrono de archivos (CSV/Excel)
+        ├── alembic/
+        └── Dockerfile
+Descomposición de Microservicios Propositiva
+Basado en las entidades críticas del negocio (Plantel, Sala, Recurso, Horario, Usuario), el backend se dividirá inicialmente en los siguientes componentes autónomos:
+Servicio de Identidad y Accesos (Auth Service)
+Responsabilidad: Gestión de usuarios, roles (Administrador, Coordinador, Docente, Alumno) y emisión de tokens JWT.
+Persistencia: Esquema aislado de usuarios y permisos.
+Servicio de Inventario y Core Académico (Core Campus Service)
+Responsabilidad: Administrar la infraestructura física de la universidad: Planteles, Salones (Capacidad, tipo) y Recursos asociados (Proyectores, aire acondicionado).
+Persistencia: Tablas estáticas y de configuración de infraestructura.
+Servicio Transaccional de Reservas (Booking Service) - El núcleo crítico
+Responsabilidad: Gestionar el ciclo de vida de las reservas. Aloja el motor de resolución de colisiones y la máquina de estados.
+Persistencia: Base de datos PostgreSQL con uso intensivo de tipos de rango de tiempo y bloqueos transaccionales (FOR UPDATE).
+Dependencias: Consume al Core Campus Service para validar la existencia del salón y al Auth Service para validar el rol de quien solicita.
+Servicio de Notificaciones y Auditoría (Notification Service)
+Responsabilidad: Reaccionar a los cambios de estado de las reservas (ej. cuando una reserva pasa de Pendiente a Cancelada por conflicto de prioridad) y enviar alertas por correo/plataforma.
+Arquitectura: Consumidor de eventos asíncronos.
+Diagrama de la arquitectura
+Diseño de Base de datos
+Diagrama Entidad Relación
+Esquema de tablas
+Diccionario de datos
+1. Tabla: alumno
+Contiene la información de los estudiantes inscritos.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_alumno
+INT / VARCHAR
+PK
+Identificador único del alumno.
+nombre
+VARCHAR
+Nombre completo del alumno.
+email
+VARCHAR
+Correo electrónico del alumno.
+activo
+BOOLEAN / INT
+Estado de actividad del alumno (ej. activo/inactivo).
+id_grupo
+INT / VARCHAR
+FK
+Relación con el grupo al que pertenece (Tabla grupo).
+fecha_registro
+DATE / DATETIME
+Fecha en la que se registró al alumno.
+2. Tabla: grupo
+Representa los grupos académicos existentes.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_grupo
+INT / VARCHAR
+PK
+Identificador único del grupo.
+carrera
+VARCHAR
+Nombre de la carrera académica del grupo.
+no_personas
+INT
+Número o cantidad de personas en el grupo.
+3. Tabla: plantel
+Registra las sedes o planteles de la institución.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_plantel
+INT / VARCHAR
+PK
+Identificador único del plantel.
+nombre
+VARCHAR
+Nombre de la sede o plantel.
+direccion
+VARCHAR
+Dirección física del plantel.
+4. Tabla: salon
+Almacena los espacios físicos o aulas de cada plantel.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_salon
+INT / VARCHAR
+PK
+Identificador único del salón.
+numero
+VARCHAR / INT
+Número o código identificador del aula.
+descripcion
+VARCHAR
+Detalles o especificaciones del salón.
+capacidad
+INT
+Cantidad máxima de personas permitidas.
+id_plantel
+INT / VARCHAR
+FK
+Relación con el plantel al que pertenece (Tabla plantel).
+5. Tabla: equipo
+Registra el hardware o equipos asignados a los salones.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_equipo
+INT / VARCHAR
+PK
+Identificador único del equipo.
+numero
+VARCHAR / INT
+Número de inventario o serie del equipo.
+descripcion
+VARCHAR
+Características o estado del equipo.
+activo
+BOOLEAN / INT
+Estado operativo del equipo.
+id_salon
+INT / VARCHAR
+FK
+Salón físico donde se encuentra el equipo (Tabla salon).
+6. Tabla: software
+Asocia los programas instalados en los equipos correspondientes.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_software
+INT / VARCHAR
+PK
+Identificador único del registro de software.
+id_equipo
+INT / VARCHAR
+FK
+Equipo donde se instalará el software (Tabla equipo).
+id_programa
+INT / VARCHAR
+FK
+Programa específico que se va a instalar (Tabla programa).
+7. Tabla: programa
+Catálogo de los programas informáticos disponibles.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_programa
+INT / VARCHAR
+PK
+Identificador único del programa.
+nombre
+VARCHAR
+Nombre comercial del software o aplicación.
+descripcion
+VARCHAR
+Detalles sobre la versión o uso del programa.
+8. Tabla: evento
+Almacena las reservaciones o actividades programadas.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_evento
+INT / VARCHAR
+PK
+Identificador único del evento o reserva.
+nombre
+VARCHAR
+Título o nombre del evento.
+descripcion
+VARCHAR
+Propósito o detalles adicionales del evento.
+fecha_apartado
+DATE
+Fecha en la que se agenda la actividad.
+hora_inicio
+TIME
+Hora exacta de inicio.
+hora_fin
+TIME
+Hora exacta de finalización.
+prioridad
+VARCHAR / INT
+Nivel de importancia asignado.
+id_tipo_evento
+INT / VARCHAR
+FK
+Categoría del evento (Tabla tipo_evento).
+id_grupo
+INT / VARCHAR
+FK
+Grupo académico que asistirá (Tabla grupo).
+id_salon
+INT / VARCHAR
+FK
+Aula asignada para el evento (Tabla salon).
+9. Tabla: tipo_evento
+Catálogo para clasificar la naturaleza de los eventos.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_tipo_evento
+INT / VARCHAR
+PK
+Identificador único del tipo de evento.
+nombre
+VARCHAR
+Nombre de la categoría (ej. Clase, Examen, Conferencia).
+prioridad
+VARCHAR / INT
+Importancia base de este tipo de actividad.
+10. Tabla: peticion
+Gestiona las solicitudes de eventos realizadas por los usuarios.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_peticion
+INT / VARCHAR
+PK
+Identificador único de la solicitud.
+fecha_solicitud
+DATE / DATETIME
+Fecha y hora de creación de la petición.
+estado
+VARCHAR
+Estatus actual (ej. Pendiente, Aprobada, Rechazada).
+id_responsable
+INT / VARCHAR
+FK
+Usuario encargado de gestionar la solicitud (Tabla usuario).
+observaciones
+VARCHAR / TEXT
+Comentarios adicionales sobre la petición.
+motivo_rechazo
+VARCHAR / TEXT
+Justificación en caso de no ser aceptada.
+tipo_registro
+VARCHAR
+Modalidad o clasificación interna de la solicitud.
+id_evento
+INT / VARCHAR
+FK
+Evento asociado a la petición (Tabla evento).
+id_usuario
+INT / VARCHAR
+FK
+Usuario que originó la solicitud (Tabla usuario).
+11. Tabla: usuario
+Registra las cuentas de las personas que acceden al sistema.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_usuario
+INT / VARCHAR
+PK
+Identificador único del usuario administrativo o docente.
+nombre
+VARCHAR
+Nombre completo del usuario.
+email
+VARCHAR
+Correo electrónico de contacto o acceso.
+password
+VARCHAR
+Contraseña encriptada para el inicio de sesión.
+fecha_registro
+DATE / DATETIME
+Fecha de alta de la cuenta en el sistema.
+id_rol
+INT / VARCHAR
+FK
+Rol asignado para los permisos (Tabla rol).
+activo
+BOOLEAN / INT
+Estado de acceso de la cuenta (ej. activo/suspendido).
+12. Tabla: rol
+Define los perfiles de acceso disponibles en el sistema.
+Campo
+Tipo de Dato Sugerido
+Clave
+Descripción
+id_rol
+INT / VARCHAR
+PK
+Identificador único del rol de usuario.
+nombre
+VARCHAR
+Nombre del perfil (ej. Administrador, Profesor, Alumno).
+puntaje
+INT
+Valor numérico asociado al nivel o rango del rol.
