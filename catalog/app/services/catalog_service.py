@@ -28,9 +28,31 @@ class PermissionDeniedException(Exception):
 
 
 
+def check_user_plantel_access(current_user, target_plantel_id):
+    """
+    Verifica si current_user tiene permiso sobre target_plantel_id.
+    - ADMINISTRADOR y COORDINADOR tienen acceso global.
+    - ADMIN_PLANTEL y ENCARGADO sólo tienen acceso a su id_plantel asignado.
+    """
+    if not current_user:
+        return
+    rol = current_user.get('rol')
+    if rol in ['ADMINISTRADOR', 'COORDINADOR']:
+        return
+    if rol in ['ADMIN_PLANTEL', 'ENCARGADO']:
+        user_plantel = current_user.get('id_plantel')
+        if user_plantel is None or user_plantel != target_plantel_id:
+            raise PermissionDeniedException("No tienes permisos suficientes para gestionar recursos de otro plantel.")
+    else:
+        raise PermissionDeniedException("No tienes permisos suficientes para realizar esta acción.")
+
+
 class CampusService:
     @staticmethod
-    def create_plantel(nombre, direccion=None):
+    def create_plantel(nombre, direccion=None, current_user=None):
+        if current_user and current_user.get('rol') not in ['ADMINISTRADOR', 'COORDINADOR']:
+            raise PermissionDeniedException("Solo administradores globales pueden crear planteles.")
+            
         if not nombre or not nombre.strip():
             raise InvalidDataException("El nombre del plantel es obligatorio y no puede estar vacío.")
         
@@ -57,8 +79,11 @@ class CampusService:
         return query.all()
 
     @staticmethod
-    def update_plantel(plantel_id, nombre, direccion=None):
+    def update_plantel(plantel_id, nombre, direccion=None, current_user=None):
         plantel = CampusService.get_plantel_by_id(plantel_id, active_only=True)
+        if current_user:
+            check_user_plantel_access(current_user, plantel_id)
+            
         if not nombre or not nombre.strip():
             raise InvalidDataException("El nombre del plantel no puede estar vacío.")
         
@@ -68,8 +93,11 @@ class CampusService:
         return plantel
 
     @staticmethod
-    def delete_plantel(plantel_id):
+    def delete_plantel(plantel_id, current_user=None):
         plantel = CampusService.get_plantel_by_id(plantel_id, active_only=True)
+        if current_user:
+            check_user_plantel_access(current_user, plantel_id)
+            
         plantel.activo = False
         
         # Opcional: Desactivación en cascada lógica de todos sus salones
@@ -85,7 +113,10 @@ class CampusService:
         return {"message": f"Plantel {plantel_id} y sus recursos dependientes desactivados lógicamente."}
 
     @staticmethod
-    def create_salon(numero, descripcion, capacidad, id_plantel):
+    def create_salon(numero, descripcion, capacidad, id_plantel, current_user=None):
+        if current_user:
+            check_user_plantel_access(current_user, id_plantel)
+
         # CA-04 (Caso Límite): Validar capacidad menor o igual a cero
         if capacidad is None or capacidad <= 0:
             raise InvalidDataException("La capacidad del salón debe ser mayor a cero.")
@@ -137,8 +168,13 @@ class CampusService:
         return query.all()
 
     @staticmethod
-    def update_salon(id_salon, numero, descripcion, capacidad, id_plantel):
+    def update_salon(id_salon, numero, descripcion, capacidad, id_plantel, current_user=None):
         salon = CampusService.get_salon_by_id(id_salon, active_only=True)
+        
+        if current_user:
+            check_user_plantel_access(current_user, salon.id_plantel)
+            if id_plantel and id_plantel != salon.id_plantel:
+                check_user_plantel_access(current_user, id_plantel)
         
         if capacidad is None or capacidad <= 0:
             raise InvalidDataException("La capacidad del salón debe ser mayor a cero.")
@@ -156,8 +192,11 @@ class CampusService:
         return salon
 
     @staticmethod
-    def delete_salon(id_salon):
+    def delete_salon(id_salon, current_user=None):
         salon = CampusService.get_salon_by_id(id_salon, active_only=True)
+        if current_user:
+            check_user_plantel_access(current_user, salon.id_plantel)
+            
         salon.activo = False
         
         # Desactivación en cascada lógica de los equipos del salón
@@ -171,7 +210,7 @@ class CampusService:
 
 class EquipmentService:
     @staticmethod
-    def create_equipment(numero, descripcion, id_salon=None):
+    def create_equipment(numero, descripcion, id_salon=None, current_user=None):
         if not numero or not str(numero).strip():
             raise InvalidDataException("El número de inventario del equipo es obligatorio.")
         
@@ -183,7 +222,9 @@ class EquipmentService:
             raise DuplicateEntityException(f"Ya existe un equipo registrado con el número de inventario '{numero_clean}'.")
         
         if id_salon:
-            CampusService.get_salon_by_id(id_salon, active_only=True)
+            salon = CampusService.get_salon_by_id(id_salon, active_only=True)
+            if current_user:
+                check_user_plantel_access(current_user, salon.id_plantel)
 
         equipo = Equipo(
             numero=numero_clean,
@@ -208,8 +249,6 @@ class EquipmentService:
     def list_equipments(active_only=True, id_salon=None):
         query = Equipo.query
         if active_only:
-            # Filtrar equipos activos en salones activos (si están asignados a un salón)
-            # Equipos sin salón asignado (almacenamiento) pero activos también se listan
             query = query.filter(Equipo.activo == True)
         
         if id_salon:
@@ -218,9 +257,13 @@ class EquipmentService:
         return query.all()
 
     @staticmethod
-    def update_equipment(id_equipo, numero, descripcion, id_salon=None):
+    def update_equipment(id_equipo, numero, descripcion, id_salon=None, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
         
+        if current_user and equipo.id_salon:
+            current_salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
+            check_user_plantel_access(current_user, current_salon.id_plantel)
+
         if not numero or not str(numero).strip():
             raise InvalidDataException("El número de inventario no puede estar vacío.")
             
@@ -233,7 +276,9 @@ class EquipmentService:
                 raise DuplicateEntityException(f"Ya existe otro equipo registrado con el número de inventario '{numero_clean}'.")
 
         if id_salon:
-            CampusService.get_salon_by_id(id_salon, active_only=True)
+            target_salon = CampusService.get_salon_by_id(id_salon, active_only=True)
+            if current_user:
+                check_user_plantel_access(current_user, target_salon.id_plantel)
 
         equipo.numero = numero_clean
         equipo.descripcion = descripcion
@@ -242,22 +287,26 @@ class EquipmentService:
         return equipo
 
     @staticmethod
-    def delete_equipment(id_equipo):
+    def delete_equipment(id_equipo, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
+        if current_user and equipo.id_salon:
+            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
+            check_user_plantel_access(current_user, salon.id_plantel)
+
         equipo.activo = False
         db.session.commit()
         return {"message": f"Equipo {id_equipo} desactivado lógicamente."}
 
     @staticmethod
-    def assign_software(id_equipo, id_programa):
-        # Obtener equipo y validar que esté activo
+    def assign_software(id_equipo, id_programa, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
-        
-        # Obtener programa y validar que esté activo
+        if current_user and equipo.id_salon:
+            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
+            check_user_plantel_access(current_user, salon.id_plantel)
+
         programa = ProgramService.get_program_by_id(id_programa, active_only=True)
         
         if programa in equipo.programas:
-            # Ya está asignado
             return equipo
             
         equipo.programas.append(programa)
@@ -265,9 +314,12 @@ class EquipmentService:
         return equipo
 
     @staticmethod
-    def remove_software(id_equipo, id_programa):
-        """Elimina físicamente el registro de la relación de la tabla intermedia 'software'."""
+    def remove_software(id_equipo, id_programa, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
+        if current_user and equipo.id_salon:
+            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
+            check_user_plantel_access(current_user, salon.id_plantel)
+
         programa = ProgramService.get_program_by_id(id_programa, active_only=True)
         
         if programa in equipo.programas:
@@ -322,3 +374,4 @@ class ProgramService:
         programa.activo = False
         db.session.commit()
         return {"message": f"Programa {id_programa} desactivado lógicamente."}
+

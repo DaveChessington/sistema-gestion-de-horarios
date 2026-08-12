@@ -35,7 +35,8 @@ def get_current_user():
         'id_usuario': payload.get('id_usuario'),
         'email': payload.get('correo'),
         'rol': payload.get('rol'),
-        'id_plantel': payload.get('id_plantel_asignado')
+        # Prefer 'id_plantel_asignado' but fallback to 'id_plantel' if not present
+        'id_plantel': payload.get('id_plantel_asignado') or payload.get('id_plantel')
     }
 
     if not current_user['id_usuario'] or not current_user['rol']:

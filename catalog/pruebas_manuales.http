@@ -1,6 +1,6 @@
 ### Variables
 @baseUrl = http://localhost:5002/api/v1
-@authUrl = http://localhost:5001/api/v1/auth
+@authUrl = http://localhost:5000/api/v1/auth
 # Tokens obtenidos llamando al servicio IAM
 @tokenAdmin = {{loginAdmin.response.body.token}}
 @tokenEncargado = {{loginEncargado.response.body.token}}

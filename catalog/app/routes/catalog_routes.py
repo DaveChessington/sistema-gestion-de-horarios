@@ -6,7 +6,8 @@ from catalog.app.services.catalog_service import (
     EntityNotFoundException,
     DuplicateEntityException,
     InvalidDataException,
-    PermissionDeniedException
+    PermissionDeniedException,
+    check_user_plantel_access
 )
 from catalog.app.utils.auth import login_required, require_roles
 
@@ -20,15 +21,19 @@ catalog_bp = Blueprint('catalog', __name__)
 @login_required
 @require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL')
 def create_plantel():
+    current_user = g.current_user
     data = request.get_json() or {}
     try:
         plantel = CampusService.create_plantel(
             nombre=data.get('nombre'),
-            direccion=data.get('direccion')
+            direccion=data.get('direccion'),
+            current_user=current_user
         )
         return jsonify(plantel.to_dict()), 201
     except InvalidDataException as e:
         return jsonify({'error': str(e)}), 400
+    except PermissionDeniedException as e:
+        return jsonify({'error': str(e)}), 403
     except Exception as e:
         return jsonify({'error': 'Error interno del servidor.'}), 500
 
@@ -50,16 +55,20 @@ def get_plantel(id_plantel):
 @login_required
 @require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL')
 def update_plantel(id_plantel):
+    current_user = g.current_user
     data = request.get_json() or {}
     try:
         plantel = CampusService.update_plantel(
             plantel_id=id_plantel,
             nombre=data.get('nombre'),
-            direccion=data.get('direccion')
+            direccion=data.get('direccion'),
+            current_user=current_user
         )
         return jsonify(plantel.to_dict()), 200
     except EntityNotFoundException as e:
         return jsonify({'error': str(e)}), 404
+    except PermissionDeniedException as e:
+        return jsonify({'error': str(e)}), 403
     except InvalidDataException as e:
         return jsonify({'error': str(e)}), 400
 
@@ -67,32 +76,39 @@ def update_plantel(id_plantel):
 @login_required
 @require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL')
 def delete_plantel(id_plantel):
+    current_user = g.current_user
     try:
-        res = CampusService.delete_plantel(id_plantel)
+        res = CampusService.delete_plantel(id_plantel, current_user=current_user)
         return jsonify(res), 200
     except EntityNotFoundException as e:
         return jsonify({'error': str(e)}), 404
+    except PermissionDeniedException as e:
+        return jsonify({'error': str(e)}), 403
 
 
 # --- ENDPOINTS SALON ---
 
 @catalog_bp.route('/salones', methods=['POST'])
 @login_required
-@require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL')
+@require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL', 'ENCARGADO')
 def create_salon():
+    current_user = g.current_user
     data = request.get_json() or {}
     try:
         salon = CampusService.create_salon(
             numero=data.get('numero'),
             descripcion=data.get('descripcion'),
             capacidad=data.get('capacidad'),
-            id_plantel=data.get('id_plantel')
+            id_plantel=data.get('id_plantel'),
+            current_user=current_user
         )
         return jsonify(salon.to_dict()), 201
     except InvalidDataException as e:
         return jsonify({'error': str(e)}), 400
     except EntityNotFoundException as e:
         return jsonify({'error': f"Error de relación: {str(e)}"}), 400
+    except PermissionDeniedException as e:
+        return jsonify({'error': str(e)}), 403
     except Exception as e:
         return jsonify({'error': 'Error interno del servidor.'}), 500
 
@@ -125,6 +141,16 @@ def get_salon(id_salon):
 def update_salon(id_salon):
     current_user = g.current_user
     data = request.get_json() or {}
+    # Explicit permission validation before proceeding
+    try:
+        # Load the existing salon to obtain its plantel
+        existing_salon = CampusService.get_salon_by_id(id_salon, active_only=True)
+        # Verify the current user has access to the salon's plantel
+        check_user_plantel_access(current_user, existing_salon.id_plantel)
+    except PermissionDeniedException as e:
+        return jsonify({'error': str(e)}), 403
+    except Exception as e:
+        return jsonify({'error': 'Error interno del servidor.'}), 500
     try:
         salon = CampusService.update_salon(
             id_salon=id_salon,
@@ -144,13 +170,16 @@ def update_salon(id_salon):
 
 @catalog_bp.route('/salones/<int:id_salon>', methods=['DELETE'])
 @login_required
-@require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL')
+@require_roles('ADMINISTRADOR', 'COORDINADOR', 'ADMIN_PLANTEL', 'ENCARGADO')
 def delete_salon(id_salon):
+    current_user = g.current_user
     try:
-        res = CampusService.delete_salon(id_salon)
+        res = CampusService.delete_salon(id_salon, current_user=current_user)
         return jsonify(res), 200
     except EntityNotFoundException as e:
         return jsonify({'error': str(e)}), 404
+    except PermissionDeniedException as e:
+        return jsonify({'error': str(e)}), 403
 
 
 # --- ENDPOINTS EQUIPO (HARDWARE) ---
