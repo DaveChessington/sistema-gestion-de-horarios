@@ -1,0 +1,155 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  app.innerHTML = `
+    <main class="login-page flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <div class="w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10">
+        <div class="grid min-h-[680px] lg:grid-cols-[1.1fr_0.9fr]">
+          <section class="login-hero relative hidden overflow-hidden bg-slate-950 p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+            <div class="hero-orb hero-orb-top" aria-hidden="true"></div>
+            <div class="hero-orb hero-orb-bottom" aria-hidden="true"></div>
+
+            <div class="relative z-10">
+              <div class="mb-10 flex items-center gap-3">
+                <div class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10">
+                  <i class="fa-solid fa-calendar-days text-xl"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-[0.24em] text-blue-300">Universidad de León</p>
+                  <p class="mt-1 text-sm font-semibold text-white">Servicios académicos</p>
+                </div>
+              </div>
+
+              <span class="inline-flex items-center gap-2 rounded-full border border-blue-300/20 bg-blue-400/10 px-3 py-1 text-xs font-semibold text-blue-200">
+                <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                Plataforma institucional
+              </span>
+              <h1 class="mt-6 max-w-lg text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">Gestión de espacios y horarios académicos</h1>
+              <p class="mt-5 max-w-lg text-sm leading-7 text-slate-300">Consulta la disponibilidad de espacios y accede a las herramientas de administración correspondientes a tu perfil institucional.</p>
+            </div>
+
+            <div class="relative z-10 grid grid-cols-2 gap-3">
+              <div class="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur-sm">
+                <i class="fa-solid fa-clock text-blue-300"></i>
+                <p class="mt-3 text-sm font-semibold text-white">Horarios claros</p>
+                <p class="mt-1 text-xs leading-5 text-slate-400">Consulta organizada de espacios académicos.</p>
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur-sm">
+                <i class="fa-solid fa-shield-halved text-emerald-300"></i>
+                <p class="mt-3 text-sm font-semibold text-white">Acceso por perfil</p>
+                <p class="mt-1 text-xs leading-5 text-slate-400">Herramientas visibles según tus credenciales.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="flex items-center justify-center bg-white p-7 sm:p-10 lg:p-12">
+            <div class="w-full max-w-md">
+              <div class="mb-8 lg:hidden">
+                <div class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-300">
+                  <i class="fa-solid fa-calendar-days"></i>
+                </div>
+              </div>
+
+              <div class="mb-9">
+                <p class="text-xs font-bold uppercase tracking-[0.25em] text-blue-600">Acceso institucional</p>
+                <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Bienvenido</h2>
+                <p class="mt-3 text-sm leading-6 text-slate-500">Ingresa tu correo institucional y contraseña para continuar.</p>
+              </div>
+
+              <form id="loginForm" novalidate class="space-y-5">
+                <div>
+                  <label for="correo" class="mb-2 block text-sm font-medium text-slate-700">Correo institucional</label>
+                  <div class="relative">
+                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400"><i class="fa-solid fa-envelope"></i></span>
+                    <input id="correo" name="correo" type="email" autocomplete="email" required class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200" placeholder="correo@udl.edu.mx" />
+                  </div>
+                  <p id="correoError" class="mt-2 hidden text-sm text-red-600">Ingresa un correo válido.</p>
+                </div>
+
+                <div>
+                  <label for="password" class="mb-2 block text-sm font-medium text-slate-700">Contraseña</label>
+                  <div class="relative">
+                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-12 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200" placeholder="••••••••" />
+                    <button type="button" id="togglePassword" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600" aria-label="Mostrar u ocultar contraseña"><i class="fa-solid fa-eye"></i></button>
+                  </div>
+                  <p id="passwordError" class="mt-2 hidden text-sm text-red-600">La contraseña es obligatoria.</p>
+                </div>
+
+                <button type="submit" class="flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-300 transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                  <span id="submitLabel">Iniciar sesión</span>
+                  <i id="submitIcon" class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+              </form>
+
+              <div class="mt-8 border-t border-slate-100 pt-6">
+                <p class="flex items-start gap-2 text-xs leading-5 text-slate-500">
+                  <i class="fa-solid fa-circle-info mt-0.5 text-blue-500"></i>
+                  El acceso administrativo se habilita automáticamente de acuerdo con el rol asociado a tus credenciales.
+                </p>
+              </div>
+
+              <p class="mt-8 text-center text-xs text-slate-400">Sistema de Gestión de Horarios · UDL</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  `;
+
+  const form = document.getElementById('loginForm');
+  const correoInput = document.getElementById('correo');
+  const passwordInput = document.getElementById('password');
+  const correoError = document.getElementById('correoError');
+  const passwordError = document.getElementById('passwordError');
+  const submitButton = form?.querySelector('button[type="submit"]');
+  const submitLabel = document.getElementById('submitLabel');
+  const submitIcon = document.getElementById('submitIcon');
+  const togglePassword = document.getElementById('togglePassword');
+
+  const setError = (input, errorEl, isValid) => {
+    if (!input || !errorEl) return;
+    input.classList.toggle('field-error', !isValid);
+    errorEl.classList.toggle('hidden', isValid);
+  };
+
+  const validate = () => {
+    const correo = correoInput?.value.trim() || '';
+    const password = passwordInput?.value.trim() || '';
+    const isCorreoValid = /.+@.+\..+/.test(correo);
+    const isPasswordValid = password.length > 0;
+
+    setError(correoInput, correoError, isCorreoValid);
+    setError(passwordInput, passwordError, isPasswordValid);
+    return isCorreoValid && isPasswordValid;
+  };
+
+  correoInput?.addEventListener('input', validate);
+  passwordInput?.addEventListener('input', validate);
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!validate()) return;
+
+    form.classList.add('is-loading');
+    submitButton?.setAttribute('disabled', 'true');
+    if (submitLabel) submitLabel.textContent = 'Validando...';
+    if (submitIcon) submitIcon.className = 'fa-solid fa-spinner fa-spin ml-2';
+
+    setTimeout(() => {
+      form.classList.remove('is-loading');
+      submitButton?.removeAttribute('disabled');
+      if (submitLabel) submitLabel.textContent = 'Iniciar sesión';
+      if (submitIcon) submitIcon.className = 'fa-solid fa-arrow-right ml-2';
+    }, 800);
+  });
+
+  togglePassword?.addEventListener('click', () => {
+    const isPassword = passwordInput?.type === 'password';
+    if (passwordInput) {
+      passwordInput.type = isPassword ? 'text' : 'password';
+      togglePassword.innerHTML = isPassword ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+    }
+  });
+});

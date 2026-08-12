@@ -1,0 +1,50 @@
+# Entorno Virtual Python
+.venv/
+venv/
+env/
+ENV/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribución y Paquetes
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Base de Datos local / logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Entornos y variables sensibles
+.env
+.env.*
+
+# Herramientas de Pruebas
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editores y Sistema Operativo
+.vscode/
+.idea/
+Thumbs.db
+ehthumbs.db
+Desktop.ini

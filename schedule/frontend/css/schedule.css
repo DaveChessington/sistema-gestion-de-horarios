@@ -1,0 +1,133 @@
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.login-page {
+  background:
+    radial-gradient(circle at 12% 10%, rgb(219 234 254 / 0.75), transparent 28rem),
+    radial-gradient(circle at 88% 90%, rgb(226 232 240 / 0.9), transparent 30rem),
+    #f8fafc;
+}
+
+.login-hero {
+  isolation: isolate;
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.hero-orb-top {
+  width: 22rem;
+  height: 22rem;
+  top: -9rem;
+  right: -8rem;
+  background: rgb(37 99 235 / 0.28);
+}
+
+.hero-orb-bottom {
+  width: 18rem;
+  height: 18rem;
+  bottom: -8rem;
+  left: -6rem;
+  background: rgb(14 165 233 / 0.16);
+}
+
+.admin-sidebar {
+  background-image: radial-gradient(circle at 20% 0%, rgb(37 99 235 / 0.18), transparent 20rem);
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.admin-nav-link > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-nav-link:not([aria-disabled="true"]):hover,
+.admin-nav-link-active {
+  border-color: rgb(96 165 250 / 0.2);
+  background: rgb(59 130 246 / 0.12);
+  color: #dbeafe;
+}
+
+.admin-nav-link[aria-disabled="true"] {
+  cursor: default;
+}
+
+.admin-stat-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 1.25rem;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.admin-stat-label {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-stat-value {
+  margin-top: 0.5rem;
+  color: #0f172a;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-stat-caption {
+  margin-top: 1rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.admin-stat-icon,
+.admin-module-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.875rem;
+}
+
+.admin-module-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #fff;
+}
+
+.field-error {
+  border-color: #f87171 !important;
+  background-color: #fef2f2 !important;
+}
+
+.is-loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
