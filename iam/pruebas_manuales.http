@@ -1,5 +1,5 @@
 ### Variables
-@baseUrl = http://localhost:5001/api/v1/auth
+@baseUrl = http://localhost:5000/api/v1/auth
 # La variable token se extrae automáticamente si usas REST Client en VS Code
 @tokenAdmin = {{loginAdmin.response.body.token}}
 @tokenDocente = {{loginDocente.response.body.token}}
@@ -57,7 +57,8 @@ Content-Type: application/json
     "apellido": "admin plantel",
     "correo": "encargado@udl.edu.mx",
     "password": "password123",
-    "rol": "ADMIN_PLANTEL"
+    "rol": "ADMIN_PLANTEL",
+    "id_plantel_asignado": 2
 }
 
 ### Registrar un Alumno
