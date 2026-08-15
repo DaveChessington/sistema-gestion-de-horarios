@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from booking.app.extensions import db
 
 class Peticion(db.Model):
@@ -6,7 +6,8 @@ class Peticion(db.Model):
     __table_args__ = {'schema': 'reservas'}
 
     id_peticion = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    fecha_solicitud = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # Servidor/BD asigna la fecha en UTC de manera limpia
+    fecha_solicitud = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     fecha = db.Column(db.Date, nullable=False, index=True)
     hora_inicio = db.Column(db.Time, nullable=False)
     hora_fin = db.Column(db.Time, nullable=False)
@@ -17,6 +18,8 @@ class Peticion(db.Model):
     id_salon = db.Column(db.Integer, nullable=False, index=True)
     id_programa = db.Column(db.Integer, nullable=True)
     materia_nombre = db.Column(db.String(150), nullable=True)
+    numero_alumnos = db.Column(db.Integer, nullable=True)
+    software_id = db.Column(db.Integer, nullable=True)
     id_tipo_evento = db.Column(db.Integer, db.ForeignKey('reservas.tipo_evento.id_tipo_evento'), nullable=False)
     
     prioridad_calculada = db.Column(db.Integer, nullable=False, default=0)
@@ -25,8 +28,9 @@ class Peticion(db.Model):
     
     id_evento = db.Column(db.Integer, db.ForeignKey('reservas.evento.id_evento'), nullable=True)
 
-    # Relaciones de apoyo opcionales
+    # Relaciones de apoyo
     tipo_evento = db.relationship('TipoEvento', backref='peticiones', lazy=True)
+    evento = db.relationship('Evento', foreign_keys=[id_evento], backref='peticiones_origen', lazy=True)
 
     @property
     def fecha_reserva(self):

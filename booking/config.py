@@ -20,3 +20,6 @@ class Config:
         f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Comunicación entre servicios
+    CATALOG_SERVICE_URL = os.environ.get('CATALOG_SERVICE_URL', 'http://127.0.0.1:5002')

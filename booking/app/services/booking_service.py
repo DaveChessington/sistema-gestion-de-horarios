@@ -43,6 +43,9 @@ def calculate_priority(user_role: str, id_tipo_evento: int) -> tuple[int, int, i
     return p_total, u_weight, e_weight
 
 
+from flask import current_app
+import requests
+
 def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
     """
     Crea una solicitud de reserva ejecutando verificación atómica y resolución de colisiones.
@@ -58,6 +61,31 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
     try:
         # Extraer y validar campos obligatorios (aceptar fecha_reserva o fecha)
         id_salon = int(data['id_salon'])
+        
+        # Validar existencia de salón comunicándose con el Catalog Service
+        catalog_url = current_app.config.get('CATALOG_SERVICE_URL', 'http://127.0.0.1:5002')
+        try:
+            # Aunque no requerimos token para el GET público según las rutas actuales, es buena práctica enviarlo
+            # si en el futuro se protege.
+            response = requests.get(f"{catalog_url}/api/v1/salones/{id_salon}", timeout=5)
+            if response.status_code == 404:
+                return {'error': f'El salón con ID {id_salon} no existe o no está activo.'}, 400
+            elif response.status_code != 200:
+                return {'error': f'Error al validar el salón. Servicio de catálogo respondió con: {response.status_code}'}, 500
+            
+            salon_data = response.json()
+            numero_alumnos = data.get('numero_alumnos')
+            if numero_alumnos is not None:
+                numero_alumnos = int(numero_alumnos)
+                if salon_data.get('capacidad', 0) < numero_alumnos:
+                    return {'error': f'La capacidad del salón ({salon_data.get("capacidad", 0)}) es menor a los alumnos esperados ({numero_alumnos})'}, 400
+                    
+        except requests.exceptions.RequestException as req_e:
+             return {'error': f'No se pudo comunicar con el servicio de catálogo para validar el salón: {str(req_e)}'}, 503
+             
+        # También aseguramos que la variable exista si entra por el except o no entra en el bloque
+        numero_alumnos = int(data.get('numero_alumnos')) if data.get('numero_alumnos') is not None else None
+
         fecha_val = data.get('fecha_reserva') or data.get('fecha')
         if not fecha_val:
             return {'error': 'El campo fecha_reserva (o fecha) es requerido'}, 400
@@ -111,6 +139,7 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
                 id_salon=id_salon,
                 id_programa=id_programa,
                 materia_nombre=materia_nombre,
+                numero_alumnos=numero_alumnos,
                 id_tipo_evento=id_tipo_evento,
                 prioridad_calculada=prioridad_nueva,
                 observaciones=observaciones
@@ -123,10 +152,11 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
             nuevo_evento = Evento(
                 nombre=nombre_evento,
                 descripcion=observaciones,
-                fecha_apartado=fecha_obj,
+                fecha=fecha_obj,
                 hora_inicio=hora_inicio_obj,
                 hora_fin=hora_fin_obj,
                 id_salon=id_salon,
+                numero_alumnos=numero_alumnos,
                 id_tipo_evento=id_tipo_evento,
                 id_usuario=id_usuario,
                 id_peticion=nueva_peticion.id_peticion,
@@ -172,6 +202,7 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
                     id_salon=id_salon,
                     id_programa=id_programa,
                     materia_nombre=materia_nombre,
+                    numero_alumnos=numero_alumnos,
                     id_tipo_evento=id_tipo_evento,
                     prioridad_calculada=prioridad_nueva,
                     observaciones=observaciones
@@ -184,10 +215,11 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
                 nuevo_evento = Evento(
                     nombre=nombre_evento,
                     descripcion=observaciones,
-                    fecha_apartado=fecha_obj,
+                    fecha=fecha_obj,
                     hora_inicio=hora_inicio_obj,
                     hora_fin=hora_fin_obj,
                     id_salon=id_salon,
+                    numero_alumnos=numero_alumnos,
                     id_tipo_evento=id_tipo_evento,
                     id_usuario=id_usuario,
                     id_peticion=nueva_peticion.id_peticion,
@@ -220,6 +252,7 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
                     id_salon=id_salon,
                     id_programa=id_programa,
                     materia_nombre=materia_nombre,
+                    numero_alumnos=numero_alumnos,
                     id_tipo_evento=id_tipo_evento,
                     prioridad_calculada=prioridad_nueva,
                     observaciones=observaciones,

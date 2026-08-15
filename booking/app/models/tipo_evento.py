@@ -1,5 +1,4 @@
 from booking.app.extensions import db
-
 class TipoEvento(db.Model):
     __tablename__ = 'tipo_evento'
     __table_args__ = {'schema': 'reservas'}
