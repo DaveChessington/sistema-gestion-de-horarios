@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login • Gestión de horarios</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="../css/schedule.css" />
-</head>
-<body class="min-h-screen bg-slate-50 text-slate-900">
+{% extends "layouts/public.html" %}
+
+{% block title %}Login • Gestión de horarios{% endblock %}
+
+{% block content %}
   <main class="login-page flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
     <div class="w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10">
       <div class="grid min-h-[680px] lg:grid-cols-[1.1fr_0.9fr]">
@@ -63,7 +57,7 @@
               <p class="mt-3 text-sm leading-6 text-slate-500">Ingresa tu correo institucional y contraseña para continuar.</p>
             </div>
 
-            <form id="loginForm" novalidate class="space-y-5">
+            <form id="loginForm" data-admin-url="{{ url_for('admin.dashboard') }}" novalidate class="space-y-5">
               <div>
                 <label for="correo" class="mb-2 block text-sm font-medium text-slate-700">Correo institucional</label>
                 <div class="relative">
@@ -87,12 +81,23 @@
                 <span id="submitLabel">Iniciar sesión</span>
                 <i id="submitIcon" class="fa-solid fa-arrow-right ml-2"></i>
               </button>
+              <a href="{{ url_for('public.schedules') }}" class="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+                <i class="fa-regular fa-calendar"></i>
+                Consultar horarios públicos
+              </a>
             </form>
+
+            <div class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs text-blue-800">
+              <p class="font-semibold"><i class="fa-solid fa-flask mr-2"></i>Acceso de demostración</p>
+              <p class="mt-2">Correo: <strong>admin@udl.edu.mx</strong></p>
+              <p class="mt-1">Contraseña: <strong>demo1234</strong></p>
+              <p id="loginCredentialError" class="mt-3 hidden font-semibold text-red-600">Las credenciales de demostración no coinciden.</p>
+            </div>
 
             <div class="mt-8 border-t border-slate-100 pt-6">
               <p class="flex items-start gap-2 text-xs leading-5 text-slate-500">
                 <i class="fa-solid fa-circle-info mt-0.5 text-blue-500"></i>
-                El acceso administrativo se habilita automáticamente de acuerdo con el rol asociado a tus credenciales.
+                Esta sesión es únicamente una simulación local del frontend y no sustituye la autenticación de IAM.
               </p>
             </div>
 
@@ -103,6 +108,8 @@
     </div>
   </main>
 
-  <script src="../js/schedule.js"></script>
-</body>
-</html>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}

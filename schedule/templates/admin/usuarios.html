@@ -1,0 +1,59 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Usuarios • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<section class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Identidad y acceso</p>
+    <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Usuarios</h2>
+    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Consulta las cuentas, roles y planteles asignados dentro del sistema.</p>
+  </div>
+  <a href="{{ url_for('admin.usuario_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200"><i class="fa-solid fa-user-plus"></i>Nuevo usuario</a>
+</section>
+
+<section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+  <article class="admin-stat-card"><p class="admin-stat-label">Usuarios</p><p id="userTotalCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Total de muestra</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Coordinadores</p><p id="userCoordinatorCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Acceso global</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Admin. plantel</p><p id="userCampusAdminCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Acceso asignado</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Académicos</p><p id="userAcademicCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Docente y alumno</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Inactivos</p><p id="userInactiveCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Acceso suspendido</p></article>
+</section>
+
+<section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-100 p-4 sm:p-5">
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div class="relative w-full xl:max-w-md"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i><input id="userSearch" type="search" aria-label="Buscar usuario" placeholder="Buscar por nombre o correo" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none placeholder:text-slate-400"></div>
+      <div class="grid grid-cols-2 gap-2 sm:flex">
+        <button id="userRoleFilter" type="button" class="filter-button"><span data-filter-label>Rol: todos</span><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+        <button id="userPlantelFilter" type="button" class="filter-button"><span data-filter-label>Plantel: todos</span><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+        <button id="userStatusFilter" type="button" class="filter-button col-span-2"><span data-filter-label>Estado: todos</span><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hidden overflow-x-auto md:block">
+    <table class="w-full min-w-[980px] text-left">
+      <thead class="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"><tr><th class="px-6 py-4">Usuario</th><th class="px-6 py-4">Correo</th><th class="px-6 py-4">Rol</th><th class="px-6 py-4">Plantel</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Acciones</th></tr></thead>
+      <tbody id="userTableBody" class="divide-y divide-slate-100"></tbody>
+    </table>
+  </div>
+  <div id="userMobileGrid" class="grid gap-4 p-4 md:hidden"></div>
+
+  <div class="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <p id="userResultCount" class="text-xs text-slate-500">Mostrando usuarios</p>
+    <nav class="flex gap-1" aria-label="Paginación de usuarios"><button id="userPreviousPage" type="button" class="pagination-button" aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></button><button id="userCurrentPage" type="button" class="pagination-button pagination-button-active" aria-current="page">1</button><button id="userNextPage" type="button" class="pagination-button" aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button></nav>
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 md:grid-cols-3">
+  <article class="interface-state-card"><span class="interface-state-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-spinner"></i></span><div><h3>Cargando usuarios</h3><p>Estado previsto durante la consulta.</p></div></article>
+  <article class="interface-state-card"><span class="interface-state-icon bg-slate-100 text-slate-500"><i class="fa-solid fa-user-slash"></i></span><div><h3>Sin coincidencias</h3><p>No existen usuarios para los filtros elegidos.</p></div></article>
+  <article class="interface-state-card"><span class="interface-state-icon bg-red-50 text-red-600"><i class="fa-solid fa-shield-halved"></i></span><div><h3>Acceso restringido</h3><p>Vista prevista para permisos insuficientes.</p></div></article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/mock-data.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/usuarios.js') }}"></script>
+{% endblock %}

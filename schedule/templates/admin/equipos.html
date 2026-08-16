@@ -1,0 +1,55 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Equipos • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<section class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.18em] text-violet-600">Inventario tecnológico</p>
+    <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Equipos</h2>
+    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Visualiza las estaciones de trabajo y el salón al que están asignadas.</p>
+  </div>
+  <a href="{{ url_for('admin.equipo_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200"><i class="fa-solid fa-plus"></i>Nuevo equipo</a>
+</section>
+
+<section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+    <div class="relative w-full xl:max-w-md">
+      <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+      <input id="equipmentSearch" type="search" aria-label="Buscar equipo" placeholder="Buscar por número o descripción" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none placeholder:text-slate-400">
+    </div>
+    <div class="grid grid-cols-2 gap-2 sm:flex">
+      <button id="equipmentPlantelFilter" type="button" class="filter-button"><i class="fa-solid fa-building-columns text-slate-400"></i><span data-filter-label>Plantel: todos</span></button>
+      <button id="equipmentSalonFilter" type="button" class="filter-button"><i class="fa-solid fa-door-open text-slate-400"></i><span data-filter-label>Salón: todos</span></button>
+      <button id="equipmentStatusFilter" type="button" class="filter-button col-span-2"><i class="fa-solid fa-filter text-slate-400"></i><span data-filter-label>Estado: todos</span></button>
+    </div>
+  </div>
+
+  <div class="hidden overflow-x-auto md:block">
+    <table class="w-full min-w-[850px] text-left">
+      <thead class="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        <tr><th class="px-6 py-4">Equipo</th><th class="px-6 py-4">Ubicación</th><th class="px-6 py-4">Software asociado</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Acciones</th></tr>
+      </thead>
+      <tbody id="equipmentTableBody" class="divide-y divide-slate-100"></tbody>
+    </table>
+  </div>
+
+  <div id="equipmentMobileGrid" class="grid gap-4 p-4 md:hidden"></div>
+
+  <div class="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <p id="equipmentResultCount" class="text-xs text-slate-500">Mostrando equipos</p>
+    <nav class="flex gap-1" aria-label="Paginación de equipos">
+      <button id="equipmentPreviousPage" type="button" class="pagination-button" aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></button>
+      <button id="equipmentCurrentPage" type="button" class="pagination-button pagination-button-active" aria-current="page">1</button>
+      <button id="equipmentNextPage" type="button" class="pagination-button" aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+    </nav>
+  </div>
+</section>
+
+<p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>Los valores son contenido de muestra para validar exclusivamente la presentación.</p>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/mock-data.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/equipos.js') }}"></script>
+{% endblock %}

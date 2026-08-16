@@ -1,0 +1,119 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Administración • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+  <section class="overflow-hidden rounded-3xl bg-slate-900 px-6 py-7 text-white shadow-xl shadow-slate-300/60 sm:px-8 sm:py-8">
+    <div class="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-200">
+          <i class="fa-solid fa-shield-halved"></i>
+          Espacio administrativo
+        </span>
+        <h2 class="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">Resumen general del sistema</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Desde este espacio se organizarán los catálogos y recursos disponibles de acuerdo con los permisos del usuario autenticado.</p>
+      </div>
+      <div id="dashboardDataStatus" class="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-xs text-slate-300">
+        <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+        <span id="dashboardDataStatusLabel">Datos visuales disponibles</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Resumen de catálogos">
+    <article class="admin-stat-card">
+      <div class="flex items-start justify-between">
+        <div><p class="admin-stat-label">Planteles</p><p id="dashboardPlantelCount" class="admin-stat-value">—</p></div>
+        <span class="admin-stat-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-building-columns"></i></span>
+      </div>
+      <p id="dashboardPlantelCaption" class="admin-stat-caption">Catálogo institucional</p>
+    </article>
+    <article class="admin-stat-card">
+      <div class="flex items-start justify-between">
+        <div><p class="admin-stat-label">Salones</p><p id="dashboardSalonCount" class="admin-stat-value">—</p></div>
+        <span class="admin-stat-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-door-open"></i></span>
+      </div>
+      <p id="dashboardSalonCaption" class="admin-stat-caption">Espacios registrados</p>
+    </article>
+    <article class="admin-stat-card">
+      <div class="flex items-start justify-between">
+        <div><p class="admin-stat-label">Equipos</p><p id="dashboardEquipoCount" class="admin-stat-value">—</p></div>
+        <span class="admin-stat-icon bg-violet-50 text-violet-600"><i class="fa-solid fa-computer"></i></span>
+      </div>
+      <p id="dashboardEquipoCaption" class="admin-stat-caption">Inventario tecnológico</p>
+    </article>
+    <article class="admin-stat-card">
+      <div class="flex items-start justify-between">
+        <div><p class="admin-stat-label">Programas</p><p id="dashboardProgramaCount" class="admin-stat-value">—</p></div>
+        <span class="admin-stat-icon bg-amber-50 text-amber-600"><i class="fa-solid fa-boxes-stacked"></i></span>
+      </div>
+      <p id="dashboardProgramaCaption" class="admin-stat-caption">Software disponible</p>
+    </article>
+    <article class="admin-stat-card">
+      <div class="flex items-start justify-between">
+        <div><p class="admin-stat-label">Usuarios</p><p id="dashboardUsuarioCount" class="admin-stat-value">—</p></div>
+        <span class="admin-stat-icon bg-cyan-50 text-cyan-600"><i class="fa-solid fa-users"></i></span>
+      </div>
+      <p id="dashboardUsuarioCaption" class="admin-stat-caption">Cuentas administrativas</p>
+    </article>
+  </section>
+
+  <section class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
+    <article class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Accesos principales</p>
+          <h2 class="mt-2 text-lg font-semibold text-slate-900">Catálogos administrativos</h2>
+          <p class="mt-1 text-sm text-slate-500">Consulta los catálogos visuales disponibles.</p>
+        </div>
+        <span class="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500">4 módulos</span>
+      </div>
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <a href="{{ url_for('admin.planteles') }}" class="admin-module-card">
+          <span class="admin-module-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-building-columns"></i></span>
+          <div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-slate-900">Planteles</h3><p class="mt-1 text-xs leading-5 text-slate-500">Organización de sedes institucionales.</p></div>
+          <i class="fa-solid fa-arrow-right text-xs text-slate-300"></i>
+        </a>
+        <a href="{{ url_for('admin.salones') }}" class="admin-module-card">
+          <span class="admin-module-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-door-open"></i></span>
+          <div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-slate-900">Salones</h3><p class="mt-1 text-xs leading-5 text-slate-500">Espacios disponibles por plantel.</p></div>
+          <i class="fa-solid fa-arrow-right text-xs text-slate-300"></i>
+        </a>
+        <a href="{{ url_for('admin.equipos') }}" class="admin-module-card">
+          <span class="admin-module-icon bg-violet-50 text-violet-600"><i class="fa-solid fa-computer"></i></span>
+          <div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-slate-900">Equipos</h3><p class="mt-1 text-xs leading-5 text-slate-500">Inventario asociado a cada espacio.</p></div>
+          <i class="fa-solid fa-arrow-right text-xs text-slate-300"></i>
+        </a>
+        <a href="{{ url_for('admin.programas') }}" class="admin-module-card">
+          <span class="admin-module-icon bg-amber-50 text-amber-600"><i class="fa-solid fa-boxes-stacked"></i></span>
+          <div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-slate-900">Programas</h3><p class="mt-1 text-xs leading-5 text-slate-500">Software y recursos instalables.</p></div>
+          <i class="fa-solid fa-arrow-right text-xs text-slate-300"></i>
+        </a>
+      </div>
+    </article>
+
+    <article class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div class="flex items-center justify-between">
+        <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Datos locales</p><h2 class="mt-2 text-lg font-semibold text-slate-900">Estado de los catálogos</h2></div>
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><i class="fa-solid fa-chart-simple"></i></span>
+      </div>
+      <div class="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div class="flex items-center justify-between rounded-xl bg-white px-4 py-3"><span class="text-xs font-medium text-slate-500">Registros mock</span><strong id="dashboardRecordCount" class="text-sm text-slate-800">—</strong></div>
+        <div class="flex items-center justify-between rounded-xl bg-white px-4 py-3"><span class="text-xs font-medium text-slate-500">Registros activos</span><strong id="dashboardActiveCount" class="text-sm text-emerald-600">—</strong></div>
+        <div class="flex items-center justify-between rounded-xl bg-white px-4 py-3"><span class="text-xs font-medium text-slate-500">Registros inactivos</span><strong id="dashboardInactiveCount" class="text-sm text-amber-600">—</strong></div>
+        <div class="flex items-center justify-between rounded-xl bg-white px-4 py-3"><span class="text-xs font-medium text-slate-500">Equipos sin salón</span><strong id="dashboardUnassignedEquipmentCount" class="text-sm text-slate-600">—</strong></div>
+      </div>
+    </article>
+  </section>
+
+  <footer class="mt-8 flex flex-col gap-2 border-t border-slate-200 py-5 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+    <p>Sistema de Gestión de Horarios · UDL</p>
+    <p>Contenedor administrativo visual</p>
+  </footer>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/mock-data.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
