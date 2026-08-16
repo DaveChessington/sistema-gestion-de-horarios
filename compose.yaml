@@ -38,6 +38,28 @@ services:
     networks:
       - backend_net
 
+  catalog:
+    build:
+      context: ./catalog
+      dockerfile: Dockerfile
+    container_name: catalog
+    restart: always
+    ports:
+      - "${CATALOG_PORT:-5002}:5002"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres_db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-gestion_horarios_udl}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    depends_on:
+      - postgres_db
+    networks:
+      - backend_net
+
 volumes:
   postgres_data:
 
