@@ -80,8 +80,8 @@ Authorization: Bearer {{alumnoToken}}
 Content-Type: application/json
 
 {
-  "id_salon": 101,
-  "id_programa": 2,
+  "id_salon": 1,
+  "id_programa": 1,
   "materia_nombre": "Estudio Grupal Examen",
   "fecha_reserva": "2026-09-15",
   "hora_inicio": "09:00",
@@ -96,7 +96,7 @@ Authorization: Bearer {{docenteToken}}
 Content-Type: application/json
 
 {
-  "id_salon": 102,
+  "id_salon": 1,
   "id_programa": 1,
   "materia_nombre": "Arquitectura de Software",
   "fecha_reserva": "2026-09-15",
