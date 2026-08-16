@@ -379,6 +379,7 @@ body {
 }
 
 .schedule-time span {
+  display: block;
   color: #94a3b8;
   font-weight: 500;
 }
@@ -1113,6 +1114,62 @@ body {
   color: #64748b;
   font-size: 0.7rem;
   line-height: 1.55;
+}
+
+.schedule-period-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  max-width: 34rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 0.35rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.schedule-period-button {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  color: #64748b;
+  text-align: left;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.schedule-period-button i {
+  grid-row: span 2;
+  text-align: center;
+}
+
+.schedule-period-button span {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.schedule-period-button small {
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  opacity: 0.72;
+}
+
+.schedule-period-button.is-active {
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 5px 12px rgb(15 23 42 / 0.18);
+}
+
+.schedule-period-button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.public-schedule-table .schedule-slot,
+.admin-schedule-table .admin-schedule-slot {
+  min-height: 5.6rem;
 }
 
 @media (min-width: 640px) {

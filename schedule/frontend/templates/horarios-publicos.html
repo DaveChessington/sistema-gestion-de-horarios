@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="../css/schedule.css" />
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900">
+<body class="min-h-screen bg-slate-50 text-slate-900" data-schedule-view="public">
   <header class="public-header sticky top-0 z-40 border-b border-slate-800 bg-slate-950 text-white">
     <div class="mx-auto flex h-16 max-w-[90rem] items-center justify-between gap-4 px-4 sm:px-6 lg:h-20 lg:px-8">
       <a href="./horarios-publicos.html" class="flex min-w-0 items-center gap-3" aria-label="Inicio de consulta pública">
@@ -69,7 +69,7 @@
               <button type="button" aria-disabled="true" class="hidden text-xs font-semibold text-blue-600 sm:inline-flex">Restablecer filtros</button>
             </div>
 
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label class="public-filter">
                 <span>Plantel</span>
                 <span class="public-select-value"><i class="fa-solid fa-building-columns"></i>Plantel León<i class="fa-solid fa-chevron-down"></i></span>
@@ -85,10 +85,6 @@
               <label class="public-filter">
                 <span>Día</span>
                 <span class="public-select-value"><i class="fa-regular fa-calendar"></i>Semana completa<i class="fa-solid fa-chevron-down"></i></span>
-              </label>
-              <label class="public-filter">
-                <span>Turno</span>
-                <span class="public-select-value"><i class="fa-regular fa-clock"></i>Todos los turnos<i class="fa-solid fa-chevron-down"></i></span>
               </label>
             </div>
           </div>
@@ -115,7 +111,16 @@
           </div>
         </div>
 
-        <div class="mt-5 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block">
+        <div class="schedule-period-switcher mt-5" role="tablist" aria-label="Seleccionar turno">
+          <button type="button" class="schedule-period-button is-active" role="tab" aria-selected="true" data-period-target="morning">
+            <i class="fa-solid fa-sun"></i><span>Turno Matutino</span><small>7:00 a 13:50</small>
+          </button>
+          <button type="button" class="schedule-period-button" role="tab" aria-selected="false" data-period-target="afternoon">
+            <i class="fa-solid fa-cloud-sun"></i><span>Turno Vespertino</span><small>16:00 a 21:50</small>
+          </button>
+        </div>
+
+        <div class="mt-5 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block" data-schedule-panel>
           <div class="overflow-x-auto">
             <table class="public-schedule-table w-full min-w-[1050px] border-collapse text-left">
               <thead>
@@ -128,7 +133,7 @@
                   <th class="px-3 py-4 text-center">Viernes</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody data-schedule-body>
                 <tr>
                   <th class="schedule-time">07:00<br /><span>09:00</span></th>
                   <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>ICO 901</span><i class="fa-solid fa-lock"></i></div><h3>Sistemas Operativos</h3><p>Laboratorio 01</p><small>Docente de muestra</small></article></td>
@@ -158,7 +163,7 @@
           </div>
         </div>
 
-        <div class="mt-5 space-y-4 lg:hidden">
+        <div class="mt-5 space-y-4 lg:hidden" data-schedule-mobile>
           <article class="public-day-card">
             <div class="public-day-header"><div><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-600">Inicio de semana</p><h3 class="mt-1 font-semibold">Lunes</h3></div><span>2 asignaciones</span></div>
             <div class="divide-y divide-slate-100">
@@ -195,5 +200,6 @@
       <p>Consulta pública de espacios académicos</p>
     </div>
   </footer>
+  <script src="../js/schedule-view.js"></script>
 </body>
 </html>
