@@ -358,6 +358,30 @@ a.admin-module-card:focus-visible {
   font-size: 0.6rem;
 }
 
+.public-select-value select,
+.public-select-value input,
+.admin-filter-select select,
+.admin-filter-select input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.public-select-value select,
+.admin-filter-select select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.public-select-value input,
+.admin-filter-select input {
+  cursor: pointer;
+}
+
 .public-schedule-table th,
 .public-schedule-table td {
   border-right: 1px solid #e2e8f0;

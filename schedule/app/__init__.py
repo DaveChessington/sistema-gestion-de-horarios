@@ -16,7 +16,8 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     from schedule.app.routes.public_routes import public_bp
-    from schedule.app.routes.admin_routes import admin_bp, legacy_admin_bp
+    from schedule.app.routes.admin_routes import admin_bp
+    from schedule.app.routes.legacy_routes import legacy_admin_bp
 
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)

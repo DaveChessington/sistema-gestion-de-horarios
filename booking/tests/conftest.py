@@ -36,12 +36,12 @@ def db_session(app):
         db.drop_all()
 
 
-def make_token(id_usuario, rol, secret='test-secret-key'):
+def make_token(id_usuario, rol, secret='test-secret-key', id_plantel_asignado=1):
     payload = {
         'id_usuario': id_usuario,
         'correo': f'user_{id_usuario}@udl.edu.mx',
         'rol': rol,
-        'id_plantel_asignado': 1,
+        'id_plantel_asignado': id_plantel_asignado,
         'exp': datetime.utcnow() + timedelta(hours=1)
     }
     return jwt.encode(payload, secret, algorithm='HS256')

@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const mockData = window.ScheduleMockData;
+  const equipmentDataElement = document.getElementById('equipmentData');
+  const salonDataElement = document.getElementById('equipmentSalonData');
+  const plantelDataElement = document.getElementById('equipmentPlantelData');
+  const actionDataElement = document.getElementById('equipmentActionData');
   const searchInput = document.getElementById('equipmentSearch');
   const plantelFilter = document.getElementById('equipmentPlantelFilter');
   const salonFilter = document.getElementById('equipmentSalonFilter');
@@ -11,11 +14,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextButton = document.getElementById('equipmentNextPage');
   const currentPageButton = document.getElementById('equipmentCurrentPage');
 
-  if (!mockData || !tableBody || !mobileGrid) return;
+  if (!equipmentDataElement || !salonDataElement || !plantelDataElement || !tableBody || !mobileGrid) return;
 
-  const planteles = mockData.readPlanteles();
-  const salones = mockData.readSalones();
-  const programas = mockData.readProgramas();
+  let equipoRecords = [];
+  let salones = [];
+  let planteles = [];
+  let actionContext = {};
+  try {
+    const parsedEquipos = JSON.parse(equipmentDataElement.textContent);
+    const parsedSalones = JSON.parse(salonDataElement.textContent);
+    const parsedPlanteles = JSON.parse(plantelDataElement.textContent);
+    const parsedActions = actionDataElement ? JSON.parse(actionDataElement.textContent) : {};
+    equipoRecords = Array.isArray(parsedEquipos) ? parsedEquipos : [];
+    salones = Array.isArray(parsedSalones) ? parsedSalones : [];
+    planteles = Array.isArray(parsedPlanteles) ? parsedPlanteles : [];
+    actionContext = parsedActions && typeof parsedActions === 'object' ? parsedActions : {};
+  } catch (_error) {
+    equipoRecords = [];
+    salones = [];
+    planteles = [];
+    actionContext = {};
+  }
+
   const plantelChoices = [null, ...planteles.map((plantel) => Number(plantel.id))];
   const states = ['all', 'active', 'inactive'];
   const pageSize = 3;
@@ -31,15 +51,36 @@ document.addEventListener('DOMContentLoaded', () => {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
-  const salonFor = (equipo) => salones.find((salon) => Number(salon.id) === Number(equipo.idSalon));
-  const plantelFor = (salon) => planteles.find((plantel) => Number(plantel.id) === Number(salon?.idPlantel));
-  const programFor = (id) => programas.find((programa) => Number(programa.id) === Number(id));
+  const salonFor = (equipo) => salones.find((salon) => Number(salon.id_salon) === Number(equipo.id_salon));
+  const plantelFor = (salon) => planteles.find((plantel) => Number(plantel.id) === Number(salon?.id_plantel));
+  const actionUrl = (template, equipoId) => String(template || '').replace(/\/0(?=\/|$)/, `/${equipoId}`);
+  const canManage = (equipo) => {
+    if (actionContext.role === 'COORDINADOR') return true;
+    const salon = salonFor(equipo);
+    return actionContext.role === 'ADMIN_PLANTEL'
+      && salon
+      && String(salon.id_plantel) === String(actionContext.assigned_plantel_id);
+  };
+  const actionControls = (equipo, compact = false) => {
+    if (!equipo.activo || !canManage(equipo)) {
+      return compact
+        ? '<p class="mt-4 text-xs text-slate-400">Sin acciones disponibles</p>'
+        : '<span class="text-xs text-slate-400">Sin acciones</span>';
+    }
+    const editUrl = escapeHtml(actionUrl(actionContext.edit_url_template, equipo.id_equipo));
+    const deactivateUrl = escapeHtml(actionUrl(actionContext.deactivate_url_template, equipo.id_equipo));
+    const label = escapeHtml(equipo.numero);
+    if (compact) {
+      return `<div class="mt-4 flex gap-2 border-t border-slate-100 pt-4"><a href="${editUrl}" class="button-secondary flex-1 justify-center"><i class="fa-regular fa-pen-to-square"></i>Editar</a><form method="post" action="${deactivateUrl}" data-equipment-deactivate data-equipment-label="${label}" class="flex-1"><button type="submit" class="button-secondary w-full justify-center text-red-600"><i class="fa-regular fa-trash-can"></i>Desactivar</button></form></div>`;
+    }
+    return `<div class="flex justify-end gap-2"><a href="${editUrl}" class="table-action" aria-label="Editar ${label}"><i class="fa-regular fa-pen-to-square"></i></a><form method="post" action="${deactivateUrl}" data-equipment-deactivate data-equipment-label="${label}"><button type="submit" class="table-action table-action-danger" aria-label="Desactivar ${label}"><i class="fa-regular fa-trash-can"></i></button></form></div>`;
+  };
   const salonChoices = () => {
     const selectedPlantel = plantelChoices[selectedPlantelIndex];
     const available = selectedPlantel === null
       ? salones
-      : salones.filter((salon) => Number(salon.idPlantel) === selectedPlantel);
-    return [null, ...available.map((salon) => Number(salon.id))];
+      : salones.filter((salon) => Number(salon.id_plantel) === selectedPlantel);
+    return [null, ...available.map((salon) => Number(salon.id_salon))];
   };
 
   const filteredEquipos = () => {
@@ -47,12 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedPlantel = plantelChoices[selectedPlantelIndex];
     const selectedSalon = salonChoices()[selectedSalonIndex];
 
-    return mockData.readEquipos().filter((equipo) => {
+    return equipoRecords.filter((equipo) => {
       const salon = salonFor(equipo);
       const plantel = plantelFor(salon);
       const searchable = `${equipo.numero} ${equipo.descripcion} ${salon?.numero || ''} ${plantel?.nombre || ''}`.toLocaleLowerCase('es');
       const matchesPlantel = selectedPlantel === null || Number(plantel?.id) === selectedPlantel;
-      const matchesSalon = selectedSalon === null || Number(salon?.id) === selectedSalon;
+      const matchesSalon = selectedSalon === null || Number(salon?.id_salon) === selectedSalon;
       const matchesState = selectedState === 'all'
         || (selectedState === 'active' && equipo.activo)
         || (selectedState === 'inactive' && !equipo.activo);
@@ -62,8 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const softwareTags = (equipo, compact = false) => {
     const associated = (Array.isArray(equipo.programas) ? equipo.programas : [])
-      .map(programFor)
-      .filter(Boolean);
+      .filter((programa) => programa && programa.activo !== false);
     if (!associated.length) return '<span class="text-xs text-slate-400">Sin programas asociados</span>';
     const limit = compact ? 1 : 2;
     const visible = associated.slice(0, limit).map((programa) => `<span class="software-tag">${escapeHtml(programa.nombre)}</span>`);
@@ -80,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="px-6 py-4"><p class="text-sm font-medium text-slate-700">${escapeHtml(salon?.numero || 'Sin salón asignado')}</p><p class="mt-1 text-xs text-slate-400">${escapeHtml(plantel?.nombre || 'Sin plantel')}</p></td>
         <td class="px-6 py-4"><div class="flex flex-wrap gap-1">${softwareTags(equipo)}</div></td>
         <td class="px-6 py-4"><span class="status-badge ${equipo.activo ? 'status-active' : 'status-inactive'}"><span></span>${equipo.activo ? 'Activo' : 'Inactivo'}</span></td>
-        <td class="px-6 py-4"><div class="flex justify-end gap-2"><button type="button" aria-disabled="true" class="table-action" aria-label="Ver"><i class="fa-regular fa-eye"></i></button><button type="button" aria-disabled="true" class="table-action" aria-label="Editar"><i class="fa-regular fa-pen-to-square"></i></button><button type="button" aria-disabled="true" class="table-action table-action-danger" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></div></td>
+        <td class="px-6 py-4">${actionControls(equipo)}</td>
       </tr>`;
   };
 
@@ -90,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return `
       <article class="resource-card">
         <div class="flex items-start justify-between"><div class="flex items-center gap-3"><span class="resource-icon ${equipo.activo ? 'bg-violet-50 text-violet-600' : 'bg-slate-100 text-slate-500'}"><i class="fa-solid fa-computer"></i></span><div><h3 class="font-semibold">${escapeHtml(equipo.numero)}</h3><p class="mt-1 text-xs text-slate-400">${escapeHtml(salon?.numero || 'Sin salón asignado')}</p></div></div><span class="status-badge ${equipo.activo ? 'status-active' : 'status-inactive'}"><span></span>${equipo.activo ? 'Activo' : 'Inactivo'}</span></div>
-        <p class="mt-4 text-xs text-slate-500">${escapeHtml(plantel?.nombre || 'Sin plantel')}</p><div class="mt-3 flex flex-wrap gap-1">${softwareTags(equipo, true)}</div>
+        <p class="mt-4 text-xs text-slate-500">${escapeHtml(plantel?.nombre || 'Sin plantel')}</p><div class="mt-3 flex flex-wrap gap-1">${softwareTags(equipo, true)}</div>${actionControls(equipo, true)}
       </article>`;
   };
 
@@ -119,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const salonLabel = salonFilter?.querySelector('[data-filter-label]');
     const statusLabel = statusFilter?.querySelector('[data-filter-label]');
     if (plantelLabel) plantelLabel.textContent = selectedPlantel === null ? 'Plantel: todos' : planteles.find((plantel) => Number(plantel.id) === selectedPlantel)?.nombre || 'Plantel';
-    if (salonLabel) salonLabel.textContent = selectedSalon === null ? 'Salón: todos' : salones.find((salon) => Number(salon.id) === selectedSalon)?.numero || 'Salón';
+    if (salonLabel) salonLabel.textContent = selectedSalon === null ? 'Salón: todos' : salones.find((salon) => Number(salon.id_salon) === selectedSalon)?.numero || 'Salón';
     if (statusLabel) statusLabel.textContent = selectedState === 'all' ? 'Estado: todos' : selectedState === 'active' ? 'Activos' : 'Inactivos';
   };
 
@@ -129,6 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
   statusFilter?.addEventListener('click', () => { selectedState = states[(states.indexOf(selectedState) + 1) % states.length]; currentPage = 1; render(); });
   previousButton?.addEventListener('click', () => { currentPage -= 1; render(); });
   nextButton?.addEventListener('click', () => { currentPage += 1; render(); });
+  document.addEventListener('submit', (event) => {
+    const deactivateForm = event.target.closest('[data-equipment-deactivate]');
+    if (!deactivateForm) return;
+    const label = deactivateForm.dataset.equipmentLabel || 'este equipo';
+    if (!window.confirm(`¿Desactivar ${label}? El equipo dejará de estar disponible en el inventario activo.`)) {
+      event.preventDefault();
+    }
+  });
 
   render();
 });

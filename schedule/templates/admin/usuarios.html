@@ -12,8 +12,19 @@
   <a href="{{ url_for('admin.usuario_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200"><i class="fa-solid fa-user-plus"></i>Nuevo usuario</a>
 </section>
 
+{% for message in get_flashed_messages(category_filter=['success']) %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status"><i class="fa-solid fa-circle-check mt-0.5"></i><p>{{ message }}</p></div>
+{% endfor %}
+{% for message in get_flashed_messages(category_filter=['error']) %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert"><i class="fa-solid fa-circle-exclamation mt-0.5"></i><p>{{ message }}</p></div>
+{% endfor %}
+
+{% for service_error in service_errors %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible completar la consulta.</p><p class="mt-1">{{ service_error }}</p></div></div>
+{% endfor %}
+
 <section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-  <article class="admin-stat-card"><p class="admin-stat-label">Usuarios</p><p id="userTotalCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Total de muestra</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Usuarios</p><p id="userTotalCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Total registrado</p></article>
   <article class="admin-stat-card"><p class="admin-stat-label">Coordinadores</p><p id="userCoordinatorCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Acceso global</p></article>
   <article class="admin-stat-card"><p class="admin-stat-label">Admin. plantel</p><p id="userCampusAdminCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Acceso asignado</p></article>
   <article class="admin-stat-card"><p class="admin-stat-label">Académicos</p><p id="userAcademicCount" class="admin-stat-value">0</p><p class="admin-stat-caption">Docente y alumno</p></article>
@@ -46,14 +57,12 @@
   </div>
 </section>
 
-<section class="mt-6 grid gap-4 md:grid-cols-3">
-  <article class="interface-state-card"><span class="interface-state-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-spinner"></i></span><div><h3>Cargando usuarios</h3><p>Estado previsto durante la consulta.</p></div></article>
-  <article class="interface-state-card"><span class="interface-state-icon bg-slate-100 text-slate-500"><i class="fa-solid fa-user-slash"></i></span><div><h3>Sin coincidencias</h3><p>No existen usuarios para los filtros elegidos.</p></div></article>
-  <article class="interface-state-card"><span class="interface-state-icon bg-red-50 text-red-600"><i class="fa-solid fa-shield-halved"></i></span><div><h3>Acceso restringido</h3><p>Vista prevista para permisos insuficientes.</p></div></article>
-</section>
+<p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>Las cuentas se obtienen de IAM y los nombres de Plantel desde Catalog. La baja desactiva el acceso sin eliminar el registro.</p>
+<script id="userData" type="application/json">{{ usuarios|tojson }}</script>
+<script id="userPlantelData" type="application/json">{{ planteles|tojson }}</script>
+<script id="userActionContext" type="application/json">{{ user_action_context|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/mock-data.js') }}"></script>
   <script src="{{ url_for('static', filename='js/usuarios.js') }}"></script>
 {% endblock %}

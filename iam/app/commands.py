@@ -4,7 +4,7 @@ from app.services.auth_service import AuthService
 def register_commands(app):
     @app.cli.command("create-admin")
     @click.option("--correo", default="admin@udl.edu.mx", help="Correo del administrador")
-    @click.option("--password", default="admin123", help="Contraseña del administrador")
+    @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Contraseña fuerte del administrador")
     @click.option("--nombre", default="Admin", help="Nombre del usuario")
     @click.option("--apellido", default="Sistema", help="Apellido del usuario")
     def create_admin(correo, password, nombre, apellido):

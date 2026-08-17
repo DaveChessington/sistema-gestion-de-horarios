@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitLabel = document.getElementById('submitLabel');
   const submitIcon = document.getElementById('submitIcon');
   const togglePassword = document.getElementById('togglePassword');
-  const credentialError = document.getElementById('loginCredentialError');
 
   if (!form || !correoInput || !passwordInput) return;
 
@@ -33,28 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
   passwordInput.addEventListener('input', validate);
 
   form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (!validate()) return;
-
-    const credentialsAreValid = correoInput.value.trim().toLowerCase() === 'admin@udl.edu.mx'
-      && passwordInput.value === 'demo1234';
-    credentialError?.classList.toggle('hidden', credentialsAreValid);
-    if (!credentialsAreValid) return;
+    if (!validate()) {
+      event.preventDefault();
+      return;
+    }
 
     form.classList.add('is-loading');
     submitButton?.setAttribute('disabled', 'true');
     if (submitLabel) submitLabel.textContent = 'Validando...';
     if (submitIcon) submitIcon.className = 'fa-solid fa-spinner fa-spin ml-2';
 
-    window.sessionStorage.setItem('schedule.mockSession', JSON.stringify({
-      name: 'Administrador Demo',
-      email: correoInput.value.trim().toLowerCase(),
-      role: 'COORDINADOR',
-    }));
-
-    window.setTimeout(() => {
-      window.location.assign(form.dataset.adminUrl || '/admin');
-    }, 500);
   });
 
   togglePassword?.addEventListener('click', () => {

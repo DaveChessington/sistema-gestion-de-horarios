@@ -12,6 +12,17 @@
   <a href="{{ url_for('admin.equipo_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200"><i class="fa-solid fa-plus"></i>Nuevo equipo</a>
 </section>
 
+{% for message in get_flashed_messages(category_filter=['success']) %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status"><i class="fa-solid fa-circle-check mt-0.5"></i><p>{{ message }}</p></div>
+{% endfor %}
+{% for message in get_flashed_messages(category_filter=['error']) %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><p>{{ message }}</p></div>
+{% endfor %}
+
+{% if catalog_error %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible consultar los equipos.</p><p class="mt-1">{{ catalog_error }}</p></div></div>
+{% endif %}
+
 <section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
   <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
     <div class="relative w-full xl:max-w-md">
@@ -46,10 +57,13 @@
   </div>
 </section>
 
-<p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>Los valores son contenido de muestra para validar exclusivamente la presentación.</p>
+<p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>Los equipos, sus ubicaciones y sus programas asociados se obtienen de Catalog. La edición y desactivación respetan el alcance del plantel de la sesión.</p>
+<script id="equipmentData" type="application/json">{{ equipos|tojson }}</script>
+<script id="equipmentSalonData" type="application/json">{{ salones|tojson }}</script>
+<script id="equipmentPlantelData" type="application/json">{{ planteles|tojson }}</script>
+<script id="equipmentActionData" type="application/json">{{ equipment_action_context|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/mock-data.js') }}"></script>
   <script src="{{ url_for('static', filename='js/equipos.js') }}"></script>
 {% endblock %}

@@ -1,6 +1,11 @@
 import enum
+import bcrypt
 from app.extensions import db
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash as check_legacy_password_hash
+
+
+BCRYPT_ROUNDS = 12
+BCRYPT_PREFIXES = ("$2a$", "$2b$", "$2y$")
 
 class RolUsuario(str,enum.Enum):
     COORDINADOR = "COORDINADOR"
@@ -36,12 +41,42 @@ class Usuario(db.Model):
     id_plantel_asignado = db.Column(db.Integer, nullable=True)
 
     def set_password(self, password):
-        """Genera el hash de la contraseña y lo almacena."""
-        self.password_hash = generate_password_hash(password)
+        """Genera un hash bcrypt con costo explícito de 12 rondas."""
+        password_bytes = str(password).encode("utf-8")
+        if len(password_bytes) > 72:
+            raise ValueError("bcrypt admite contraseñas de hasta 72 bytes")
+        self.password_hash = bcrypt.hashpw(
+            password_bytes,
+            bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
+        ).decode("utf-8")
 
     def check_password(self, password):
-        """Verifica si la contraseña dada coincide con el hash almacenado."""
-        return check_password_hash(self.password_hash, password)
+        """Verifica bcrypt y conserva compatibilidad con hashes Werkzeug."""
+        if not self.password_hash:
+            return False
+        try:
+            if self.is_bcrypt_hash:
+                return bcrypt.checkpw(
+                    str(password).encode("utf-8"),
+                    self.password_hash.encode("utf-8"),
+                )
+            return check_legacy_password_hash(self.password_hash, str(password))
+        except (TypeError, ValueError):
+            return False
+
+    @property
+    def is_bcrypt_hash(self):
+        return self.password_hash.startswith(BCRYPT_PREFIXES)
+
+    @property
+    def password_needs_rehash(self):
+        """Detecta hashes heredados o bcrypt con un costo distinto de 12."""
+        if not self.is_bcrypt_hash:
+            return True
+        try:
+            return int(self.password_hash.split("$", 3)[2]) != BCRYPT_ROUNDS
+        except (IndexError, TypeError, ValueError):
+            return True
 
     def to_dict(self):
         """Retorna una representación segura en diccionario."""

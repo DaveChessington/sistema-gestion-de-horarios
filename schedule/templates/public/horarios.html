@@ -4,6 +4,7 @@
 {% block body_attributes %} data-schedule-view="public"{% endblock %}
 
 {% block content %}
+  {% set current_user = session.get('iam_user') %}
   <header class="public-header sticky top-0 z-40 border-b border-slate-800 bg-slate-950 text-white">
     <div class="mx-auto flex h-16 max-w-[90rem] items-center justify-between gap-4 px-4 sm:px-6 lg:h-20 lg:px-8">
       <a href="{{ url_for('public.schedules') }}" class="flex min-w-0 items-center gap-3" aria-label="Inicio de consulta pública">
@@ -22,12 +23,30 @@
         <span class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400">Disponibilidad</span>
       </nav>
 
-      <a href="{{ url_for('public.login') }}" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-white/15 sm:px-4">
-        <i class="fa-solid fa-right-to-bracket"></i>
-        <span class="hidden sm:inline">Iniciar sesión</span>
-      </a>
+      {% if current_user %}
+        <div class="flex items-center gap-2">
+          <span class="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200 lg:inline-flex"><i class="fa-regular fa-user text-blue-300"></i><span class="max-w-32 truncate">{{ current_user.get('nombre', 'Usuario') }}</span><strong class="text-[10px] uppercase tracking-wide text-slate-400">{{ current_user.get('rol', '')|replace('_', ' ') }}</strong></span>
+          {% if current_user.get('rol') in ['COORDINADOR', 'ADMIN_PLANTEL'] %}
+            <a id="publicAdminReturn" href="{{ url_for('admin.dashboard') }}" class="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/15 px-3 py-2.5 text-xs font-semibold text-blue-100 transition hover:bg-blue-500/25"><i class="fa-solid fa-arrow-left"></i><span class="hidden sm:inline">Volver al panel</span></a>
+          {% endif %}
+          <form method="post" action="{{ url_for('public.logout') }}">
+            <button id="publicSessionLogout" type="submit" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-white/15 sm:px-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="hidden sm:inline">Cerrar sesión</span></button>
+          </form>
+        </div>
+      {% else %}
+        <a id="publicLoginLink" href="{{ url_for('public.login') }}" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-white/15 sm:px-4">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span class="hidden sm:inline">Iniciar sesión</span>
+        </a>
+      {% endif %}
     </div>
   </header>
+
+  {% for message in get_flashed_messages(category_filter=['role_notice']) %}
+    <div id="rolePermissionNotice" class="fixed right-4 top-20 z-50 w-[calc(100%-2rem)] max-w-md rounded-2xl border border-blue-200 bg-white p-4 text-sm text-slate-700 shadow-xl shadow-slate-900/15 sm:right-6 sm:top-24" role="status" aria-live="polite">
+      <div class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><i class="fa-solid fa-circle-info"></i></span><div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Acceso según tu perfil</p><p class="mt-1 leading-5">{{ message }}</p></div><button id="rolePermissionNoticeClose" type="button" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Cerrar aviso"><i class="fa-solid fa-xmark"></i></button></div>
+    </div>
+  {% endfor %}
 
   <main>
     <section class="public-hero border-b border-slate-200">
@@ -42,10 +61,14 @@
             <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">Revisa la ocupación semanal de los espacios universitarios sin necesidad de iniciar sesión.</p>
           </div>
 
-          <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+          <div class="rounded-2xl border px-4 py-3 text-xs leading-5{% if schedule_error %} border-red-200 bg-red-50 text-red-800{% else %} border-emerald-200 bg-emerald-50 text-emerald-800{% endif %}">
             <div class="flex items-start gap-2">
-              <i class="fa-solid fa-flask mt-0.5"></i>
-              <p><strong>Vista demostrativa:</strong> los horarios visibles son datos de muestra.</p>
+              <i class="fa-solid {% if schedule_error %}fa-triangle-exclamation{% else %}fa-cloud-arrow-down{% endif %} mt-0.5"></i>
+              {% if schedule_error %}
+                <p><strong>Consulta no disponible:</strong> no fue posible obtener los horarios desde Booking.</p>
+              {% else %}
+                <p><strong>Booking conectado:</strong> la ocupación mostrada proviene del servicio de horarios.</p>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -53,7 +76,7 @@
     </section>
 
     <div class="mx-auto max-w-[90rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="filters-title">
+      <form class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="filters-title" data-schedule-filters data-schedule-api-url="{{ url_for('public.schedule_data') }}" data-filter-options-url="{{ url_for('public.schedule_filter_options') }}">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-end">
           <div class="flex-1">
             <div class="mb-4 flex items-center justify-between gap-3">
@@ -61,42 +84,43 @@
                 <p id="filters-title" class="text-sm font-semibold text-slate-900"><i class="fa-solid fa-sliders mr-2 text-blue-600"></i>Filtros de consulta</p>
                 <p class="mt-1 text-xs text-slate-400">Selecciona los criterios para encontrar un horario.</p>
               </div>
-              <button type="button" aria-disabled="true" class="hidden text-xs font-semibold text-blue-600 sm:inline-flex">Restablecer filtros</button>
+              <button type="reset" data-filter-reset class="hidden text-xs font-semibold text-blue-600 sm:inline-flex">Restablecer filtros</button>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <label class="public-filter">
                 <span>Plantel</span>
-                <span class="public-select-value"><i class="fa-solid fa-building-columns"></i>Plantel León<i class="fa-solid fa-chevron-down"></i></span>
+                <span class="public-select-value"><i class="fa-solid fa-building-columns"></i><select name="id_plantel" data-filter-plantel aria-label="Plantel"><option value="">Todos los planteles</option></select><i class="fa-solid fa-chevron-down"></i></span>
               </label>
               <label class="public-filter">
                 <span>Salón</span>
-                <span class="public-select-value"><i class="fa-solid fa-door-open"></i>Todos los salones<i class="fa-solid fa-chevron-down"></i></span>
+                <span class="public-select-value"><i class="fa-solid fa-door-open"></i><select name="id_salon" data-filter-salon aria-label="Salón"><option value="">Todos los salones</option></select><i class="fa-solid fa-chevron-down"></i></span>
               </label>
               <label class="public-filter">
-                <span>Grupo</span>
-                <span class="public-select-value"><i class="fa-solid fa-users"></i>Todos los grupos<i class="fa-solid fa-chevron-down"></i></span>
+                <span>Programa</span>
+                <span class="public-select-value"><i class="fa-solid fa-graduation-cap"></i><select name="id_programa" data-filter-programa aria-label="Programa"><option value="">Todos los programas</option></select><i class="fa-solid fa-chevron-down"></i></span>
               </label>
               <label class="public-filter">
                 <span>Día</span>
-                <span class="public-select-value"><i class="fa-regular fa-calendar"></i>Semana completa<i class="fa-solid fa-chevron-down"></i></span>
+                <span class="public-select-value"><i class="fa-regular fa-calendar"></i><input type="date" name="fecha_reserva" value="{{ filter_values.get('fecha_reserva', filter_values.get('fecha', '')) }}" aria-label="Fecha de reserva"></span>
               </label>
             </div>
           </div>
 
-          <button type="button" aria-disabled="true" class="inline-flex h-[3.1rem] items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-200">
+          <button type="submit" data-filter-submit class="inline-flex h-[3.1rem] items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-200 disabled:cursor-wait disabled:opacity-60">
             <i class="fa-solid fa-magnifying-glass"></i>
             Consultar
           </button>
         </div>
-      </section>
+        <p class="mt-3 hidden text-xs text-slate-500" data-schedule-filter-status role="status" aria-live="polite"></p>
+      </form>
 
       <section class="mt-6" aria-labelledby="schedule-title">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Semana académica</p>
             <h2 id="schedule-title" class="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">Disponibilidad de espacios</h2>
-            <p class="mt-1 text-sm text-slate-500">Plantel León · Todos los salones</p>
+            <p class="mt-1 text-sm text-slate-500" data-schedule-summary>Todos los planteles · Todos los salones</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold shadow-sm">
@@ -115,6 +139,12 @@
           </button>
         </div>
 
+          <div id="bookingScheduleError" class="mt-5 rounded-3xl border border-red-200 bg-red-50 p-6 text-red-800{% if not schedule_error %} hidden{% endif %}" role="alert" data-schedule-error>
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+              <div><h3 class="font-semibold">No fue posible consultar los horarios</h3><p class="mt-1 text-sm" data-schedule-error-message>{{ schedule_error or '' }}</p></div>
+            </div>
+          </div>
         <div class="mt-5 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block" data-schedule-panel>
           <div class="overflow-x-auto">
             <table class="public-schedule-table w-full min-w-[1050px] border-collapse text-left">
@@ -128,54 +158,12 @@
                   <th class="px-3 py-4 text-center">Viernes</th>
                 </tr>
               </thead>
-              <tbody data-schedule-body>
-                <tr>
-                  <th class="schedule-time">07:00<br /><span>09:00</span></th>
-                  <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>ICO 901</span><i class="fa-solid fa-lock"></i></div><h3>Sistemas Operativos</h3><p>Laboratorio 01</p><small>Docente de muestra</small></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>07:00 – 09:00</span></article></td>
-                  <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>ICO 401</span><i class="fa-solid fa-lock"></i></div><h3>Estructuras de Datos</h3><p>Laboratorio 02</p><small>Docente de muestra</small></article></td>
-                  <td><article class="schedule-slot schedule-maintenance"><i class="fa-solid fa-screwdriver-wrench"></i><strong>Mantenimiento</strong><span>Laboratorio 03</span></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>07:00 – 09:00</span></article></td>
-                </tr>
-                <tr>
-                  <th class="schedule-time">09:00<br /><span>11:00</span></th>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>09:00 – 11:00</span></article></td>
-                  <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>IIA 601</span><i class="fa-solid fa-lock"></i></div><h3>Redes de Computadoras</h3><p>Laboratorio 02</p><small>Docente de muestra</small></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>09:00 – 11:00</span></article></td>
-                  <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>ICO 602</span><i class="fa-solid fa-lock"></i></div><h3>Bases de Datos</h3><p>Laboratorio 01</p><small>Docente de muestra</small></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>09:00 – 11:00</span></article></td>
-                </tr>
-                <tr>
-                  <th class="schedule-time">11:00<br /><span>13:00</span></th>
-                  <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>ICO 701</span><i class="fa-solid fa-lock"></i></div><h3>Ingeniería de Software</h3><p>Laboratorio 03</p><small>Docente de muestra</small></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>11:00 – 13:00</span></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>11:00 – 13:00</span></article></td>
-                  <td><article class="schedule-slot schedule-free"><i class="fa-regular fa-circle-check"></i><strong>Disponible</strong><span>11:00 – 13:00</span></article></td>
-                  <td><article class="schedule-slot schedule-occupied"><div class="schedule-slot-top"><span>IIA 801</span><i class="fa-solid fa-lock"></i></div><h3>Inteligencia Artificial</h3><p>Laboratorio 02</p><small>Docente de muestra</small></article></td>
-                </tr>
-              </tbody>
+              <tbody data-schedule-body></tbody>
             </table>
           </div>
         </div>
 
-        <div class="mt-5 space-y-4 lg:hidden" data-schedule-mobile>
-          <article class="public-day-card">
-            <div class="public-day-header"><div><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-600">Inicio de semana</p><h3 class="mt-1 font-semibold">Lunes</h3></div><span>2 asignaciones</span></div>
-            <div class="divide-y divide-slate-100">
-              <div class="mobile-schedule-item"><time>07:00<br /><span>09:00</span></time><div class="mobile-status-line bg-red-400"></div><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold">Sistemas Operativos</p><p class="mt-1 text-xs text-slate-500">ICO 901 · Laboratorio 01</p></div><span class="status-badge status-occupied"><span></span>Ocupado</span></div>
-              <div class="mobile-schedule-item"><time>09:00<br /><span>11:00</span></time><div class="mobile-status-line bg-emerald-400"></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold">Espacio disponible</p><p class="mt-1 text-xs text-slate-500">Todos los salones</p></div><span class="status-badge status-active"><span></span>Libre</span></div>
-              <div class="mobile-schedule-item"><time>11:00<br /><span>13:00</span></time><div class="mobile-status-line bg-red-400"></div><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold">Ingeniería de Software</p><p class="mt-1 text-xs text-slate-500">ICO 701 · Laboratorio 03</p></div><span class="status-badge status-occupied"><span></span>Ocupado</span></div>
-            </div>
-          </article>
-
-          <article class="public-day-card">
-            <div class="public-day-header"><div><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-600">Día seleccionado</p><h3 class="mt-1 font-semibold">Martes</h3></div><span>1 asignación</span></div>
-            <div class="divide-y divide-slate-100">
-              <div class="mobile-schedule-item"><time>07:00<br /><span>09:00</span></time><div class="mobile-status-line bg-emerald-400"></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold">Espacio disponible</p><p class="mt-1 text-xs text-slate-500">Todos los salones</p></div><span class="status-badge status-active"><span></span>Libre</span></div>
-              <div class="mobile-schedule-item"><time>09:00<br /><span>11:00</span></time><div class="mobile-status-line bg-red-400"></div><div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold">Redes de Computadoras</p><p class="mt-1 text-xs text-slate-500">IIA 601 · Laboratorio 02</p></div><span class="status-badge status-occupied"><span></span>Ocupado</span></div>
-            </div>
-          </article>
-        </div>
+        <div class="mt-5 space-y-4 lg:hidden" data-schedule-mobile></div>
       </section>
 
       <section class="mt-8" aria-labelledby="states-title">
@@ -198,5 +186,6 @@
 {% endblock %}
 
 {% block scripts %}
+  <script id="bookingScheduleData" type="application/json">{{ schedule_records|tojson }}</script>
   <script src="{{ url_for('static', filename='js/schedule-view.js') }}"></script>
 {% endblock %}

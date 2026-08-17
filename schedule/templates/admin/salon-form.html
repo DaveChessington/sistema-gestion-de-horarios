@@ -1,28 +1,32 @@
 {% extends "layouts/admin.html" %}
 
-{% block title %}Nuevo salón • Gestión de horarios{% endblock %}
+{% block title %}{{ 'Editar' if is_edit else 'Nuevo' }} salón • Gestión de horarios{% endblock %}
 
 {% block admin_content %}
   <p class="section-eyebrow text-emerald-600">Espacios académicos</p>
-  <h2 class="section-title">Nuevo salón</h2>
-  <p class="section-description">Define visualmente su ubicación, descripción y capacidad.</p>
+  <h2 class="section-title">{{ 'Editar salón' if is_edit else 'Nuevo salón' }}</h2>
+  <p class="section-description">{{ 'Actualiza su ubicación, descripción y capacidad.' if is_edit else 'Define visualmente su ubicación, descripción y capacidad.' }}</p>
 
-  <form id="salonForm" data-list-url="{{ url_for('admin.salones') }}" class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" novalidate>
+  {% if form_error %}
+    <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible {{ 'actualizar' if is_edit else 'registrar' }} el salón.</p><p class="mt-1">{{ form_error }}</p></div></div>
+  {% endif %}
+
+  <form id="salonForm" method="post" action="{{ form_action }}" data-submit-progress="{{ 'Guardando...' if is_edit else 'Registrando...' }}" class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" novalidate>
     <div class="space-y-6">
       <section class="form-section">
         <div class="form-section-heading"><span class="form-section-number">1</span><div><h3>Identificación</h3><p>Información principal del espacio académico.</p></div></div>
         <div class="mt-6 grid gap-5 sm:grid-cols-2">
           <label class="form-field">
             <span>Número o nombre <strong>*</strong></span>
-            <div class="form-input-icon"><i class="fa-solid fa-door-open"></i><input id="salonName" name="numero" type="text" placeholder="Ej. Laboratorio 01" required /></div>
+            <div class="form-input-icon"><i class="fa-solid fa-door-open"></i><input id="salonName" name="numero" type="text" value="{{ form_values.numero }}" placeholder="Ej. Laboratorio 01" required /></div>
             <small id="salonNameError" class="hidden text-red-600">El nombre o número es obligatorio.</small>
           </label>
           <label class="form-field">
             <span>Capacidad <strong>*</strong></span>
-            <div class="form-input-icon"><i class="fa-solid fa-users"></i><input id="salonCapacity" name="capacidad" type="number" min="1" placeholder="30" required /></div>
+            <div class="form-input-icon"><i class="fa-solid fa-users"></i><input id="salonCapacity" name="capacidad" type="number" min="1" value="{{ form_values.capacidad }}" placeholder="30" required /></div>
             <small id="salonCapacityError" class="hidden text-red-600">Ingresa una capacidad mayor a cero.</small>
           </label>
-          <label class="form-field sm:col-span-2"><span>Descripción</span><textarea id="salonDescription" name="descripcion" class="form-textarea" placeholder="Describe el uso o características del salón"></textarea></label>
+          <label class="form-field sm:col-span-2"><span>Descripción</span><textarea id="salonDescription" name="descripcion" class="form-textarea" placeholder="Describe el uso o características del salón">{{ form_values.descripcion }}</textarea></label>
         </div>
       </section>
 
@@ -30,13 +34,13 @@
         <div class="form-section-heading"><span class="form-section-number">2</span><div><h3>Ubicación</h3><p>Plantel al que pertenece el salón.</p></div></div>
         <label class="form-field mt-6">
           <span>Plantel <strong>*</strong></span>
-          <div class="form-select"><i class="fa-solid fa-building-columns"></i><select id="salonPlantel" name="id_plantel" class="w-full bg-transparent text-sm outline-none" required><option value="">Seleccionar plantel</option></select><i class="fa-solid fa-chevron-down"></i></div>
+          <div class="form-select"><i class="fa-solid fa-building-columns"></i><select id="salonPlantel" name="id_plantel" class="w-full bg-transparent text-sm outline-none" required><option value="">Seleccionar plantel</option>{% for plantel in planteles %}<option value="{{ plantel.id }}"{% if form_values.id_plantel == plantel.id|string %} selected{% endif %}>{{ plantel.nombre }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>
           <small id="salonPlantelError" class="hidden text-red-600">Selecciona un plantel activo.</small>
         </label>
       </section>
 
-      <section class="form-section"><div class="flex justify-between gap-4"><div><h3 class="text-sm font-semibold">Estado del salón</h3><p class="mt-1 text-xs text-slate-500">Se representa disponible al registrarse.</p></div><span class="visual-toggle"><span></span></span></div></section>
-      <div class="form-actions"><a href="{{ url_for('admin.salones') }}" class="button-secondary">Cancelar</a><button type="submit" class="button-primary"><i class="fa-solid fa-door-open"></i>Registrar salón</button></div>
+      <section class="form-section"><div class="flex justify-between gap-4"><div><h3 class="text-sm font-semibold">Estado del salón</h3><p class="mt-1 text-xs text-slate-500">{{ 'La edición conserva el salón activo.' if is_edit else 'Se representa disponible al registrarse.' }}</p></div><span class="visual-toggle"><span></span></span></div></section>
+      <div class="form-actions"><a href="{{ url_for('admin.salones') }}" class="button-secondary">Cancelar</a><button type="submit" class="button-primary"><i class="fa-solid fa-door-open"></i>{{ 'Guardar cambios' if is_edit else 'Registrar salón' }}</button></div>
     </div>
 
     <aside class="space-y-5 xl:sticky xl:top-28 xl:self-start">
@@ -47,12 +51,11 @@
         <small id="salonPreviewPlantel">Plantel sin seleccionar</small>
         <div><span>Capacidad</span><strong id="salonPreviewCapacity">— personas</strong></div>
       </section>
-      <section class="form-note"><span class="interface-state-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-link"></i></span><h3>Dependencia</h3><p>Todo salón debe asociarse visualmente con un plantel.</p></section>
+      <section class="form-note"><span class="interface-state-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-link"></i></span><h3>Dependencia</h3><p>{% if is_edit %}Catalog validará tanto el plantel actual como cualquier nueva ubicación seleccionada.{% else %}Todo salón debe asociarse con un plantel activo obtenido desde Catalog.{% endif %}</p></section>
     </aside>
   </form>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/mock-data.js') }}"></script>
   <script src="{{ url_for('static', filename='js/salon-form.js') }}"></script>
 {% endblock %}

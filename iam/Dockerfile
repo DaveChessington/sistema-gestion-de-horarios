@@ -3,6 +3,7 @@ WORKDIR /app
 COPY . /app
 ADD run.py ./
 RUN pip install -r requirements.txt
+RUN pip install -r requirements-security.txt
 CMD ["python", "run.py"]
 
 #build -> docker build -t gestion-horarios .

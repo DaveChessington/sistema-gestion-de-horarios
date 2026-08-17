@@ -1,56 +1,56 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const mockData = window.ScheduleMockData;
-  if (!mockData) return;
+  const dataElement = document.getElementById('dashboardData');
+  if (!dataElement) return;
 
-  const collections = [
-    {
-      items: mockData.readPlanteles(),
-      countId: 'dashboardPlantelCount',
-      captionId: 'dashboardPlantelCaption',
-    },
-    {
-      items: mockData.readSalones(),
-      countId: 'dashboardSalonCount',
-      captionId: 'dashboardSalonCaption',
-    },
-    {
-      items: mockData.readEquipos(),
-      countId: 'dashboardEquipoCount',
-      captionId: 'dashboardEquipoCaption',
-    },
-    {
-      items: mockData.readProgramas(),
-      countId: 'dashboardProgramaCount',
-      captionId: 'dashboardProgramaCaption',
-    },
-    {
-      items: mockData.readUsuarios(),
-      countId: 'dashboardUsuarioCount',
-      captionId: 'dashboardUsuarioCaption',
-    },
-  ];
+  let dashboardData;
+  try {
+    dashboardData = JSON.parse(dataElement.textContent);
+  } catch (_error) {
+    return;
+  }
 
-  collections.forEach(({ items, countId, captionId }) => {
-    const activeCount = items.filter((item) => item.activo).length;
-    const count = document.getElementById(countId);
-    const caption = document.getElementById(captionId);
-    if (count) count.textContent = String(items.length);
-    if (caption) caption.textContent = `${activeCount} ${activeCount === 1 ? 'activo' : 'activos'} de ${items.length}`;
+  const collectionBindings = {
+    planteles: ['dashboardPlantelCount', 'dashboardPlantelCaption'],
+    salones: ['dashboardSalonCount', 'dashboardSalonCaption'],
+    equipos: ['dashboardEquipoCount', 'dashboardEquipoCaption'],
+    programas: ['dashboardProgramaCount', 'dashboardProgramaCaption'],
+    usuarios: ['dashboardUsuarioCount', 'dashboardUsuarioCaption'],
+  };
+
+  Object.entries(collectionBindings).forEach(([name, [countId, captionId]]) => {
+    const metrics = dashboardData.collections?.[name] || { total: 0, active: 0 };
+    const countElement = document.getElementById(countId);
+    const captionElement = document.getElementById(captionId);
+    if (countElement) countElement.textContent = String(metrics.total);
+    if (captionElement) {
+      captionElement.textContent = `${metrics.active} ${metrics.active === 1 ? 'activo' : 'activos'} de ${metrics.total}`;
+    }
   });
 
-  const allItems = collections.flatMap(({ items }) => items);
-  const activeCount = allItems.filter((item) => item.activo).length;
-  const inactiveCount = allItems.length - activeCount;
-  const unassignedEquipmentCount = mockData.readEquipos().filter((equipo) => !equipo.idSalon).length;
+  const values = {
+    dashboardRecordCount: dashboardData.totals?.records,
+    dashboardActiveCount: dashboardData.totals?.active,
+    dashboardInactiveCount: dashboardData.totals?.inactive,
+    dashboardUnassignedEquipmentCount: dashboardData.totals?.unassigned_equipment,
+    dashboardBookingCount: dashboardData.booking?.total,
+    dashboardApprovedBookingCount: dashboardData.booking?.approved,
+    dashboardPendingBookingCount: dashboardData.booking?.pending,
+  };
+  Object.entries(values).forEach(([elementId, value]) => {
+    const element = document.getElementById(elementId);
+    if (element) element.textContent = String(Number.isInteger(value) ? value : 0);
+  });
 
-  const recordCount = document.getElementById('dashboardRecordCount');
-  const activeTotal = document.getElementById('dashboardActiveCount');
-  const inactiveTotal = document.getElementById('dashboardInactiveCount');
-  const unassignedTotal = document.getElementById('dashboardUnassignedEquipmentCount');
-  const dataStatusLabel = document.getElementById('dashboardDataStatusLabel');
-  if (recordCount) recordCount.textContent = String(allItems.length);
-  if (activeTotal) activeTotal.textContent = String(activeCount);
-  if (inactiveTotal) inactiveTotal.textContent = String(inactiveCount);
-  if (unassignedTotal) unassignedTotal.textContent = String(unassignedEquipmentCount);
-  if (dataStatusLabel) dataStatusLabel.textContent = 'Datos mock sincronizados';
+  const services = Object.values(dashboardData.services || {});
+  const connectedServices = services.filter(Boolean).length;
+  const statusLabel = document.getElementById('dashboardDataStatusLabel');
+  const statusDot = document.getElementById('dashboardDataStatusDot');
+  const scopeLabel = dashboardData.scope === 'plantel' ? 'alcance del plantel' : 'alcance global';
+  if (statusLabel) {
+    statusLabel.textContent = `${connectedServices} de ${services.length} servicios conectados · ${scopeLabel}`;
+  }
+  if (statusDot) {
+    statusDot.classList.remove('bg-slate-400');
+    statusDot.classList.add(connectedServices === services.length ? 'bg-emerald-400' : 'bg-amber-400');
+  }
 });

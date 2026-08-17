@@ -1,20 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const mockData = window.ScheduleMockData;
   const form = document.getElementById('salonForm');
   const nameInput = document.getElementById('salonName');
   const capacityInput = document.getElementById('salonCapacity');
-  const descriptionInput = document.getElementById('salonDescription');
   const plantelSelect = document.getElementById('salonPlantel');
   const nameError = document.getElementById('salonNameError');
   const capacityError = document.getElementById('salonCapacityError');
   const plantelError = document.getElementById('salonPlantelError');
 
-  if (!mockData || !form || !nameInput || !capacityInput || !plantelSelect) return;
-
-  const activePlanteles = mockData.readPlanteles().filter((plantel) => plantel.activo);
-  activePlanteles.forEach((plantel) => {
-    plantelSelect.add(new Option(plantel.nombre, String(plantel.id)));
-  });
+  if (!form || !nameInput || !capacityInput || !plantelSelect) return;
 
   const updatePreview = () => {
     const selectedOption = plantelSelect.options[plantelSelect.selectedIndex];
@@ -27,33 +20,33 @@ document.addEventListener('DOMContentLoaded', () => {
   plantelSelect.addEventListener('change', updatePreview);
 
   form.addEventListener('submit', (event) => {
-    event.preventDefault();
     const numero = nameInput.value.trim();
     const capacidad = Number(capacityInput.value);
-    const idPlantel = Number(plantelSelect.value);
     const validName = numero.length > 0;
     const validCapacity = Number.isFinite(capacidad) && capacidad > 0;
-    const validPlantel = activePlanteles.some((plantel) => Number(plantel.id) === idPlantel);
+    const validPlantel = plantelSelect.value.length > 0;
 
     nameError?.classList.toggle('hidden', validName);
     capacityError?.classList.toggle('hidden', validCapacity);
     plantelError?.classList.toggle('hidden', validPlantel);
     nameInput.classList.toggle('field-error', !validName);
     capacityInput.classList.toggle('field-error', !validCapacity);
+    plantelSelect.classList.toggle('field-error', !validPlantel);
     plantelSelect.setAttribute('aria-invalid', String(!validPlantel));
-    if (!validName || !validCapacity || !validPlantel) return;
+    if (!validName || !validCapacity || !validPlantel) {
+      event.preventDefault();
+      if (!validName) nameInput.focus();
+      else if (!validCapacity) capacityInput.focus();
+      else plantelSelect.focus();
+      return;
+    }
 
-    const salones = mockData.readSalones();
-    salones.push({
-      id: mockData.nextSalonId(salones),
-      numero,
-      descripcion: descriptionInput?.value.trim() || '',
-      capacidad,
-      idPlantel,
-      activo: true,
-    });
-    mockData.writeSalones(salones);
-    window.location.assign(form.dataset.listUrl || '/admin/salones');
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.disabled = true;
+      const progressLabel = form.dataset.submitProgress || 'Procesando...';
+      submitButton.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>${progressLabel}`;
+    }
   });
 
   updatePreview();

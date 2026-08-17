@@ -1,27 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const mockData = window.ScheduleMockData;
+  const salonDataElement = document.getElementById('equipmentFormSalonData');
   const form = document.getElementById('equipmentForm');
   const nameInput = document.getElementById('equipmentName');
-  const descriptionInput = document.getElementById('equipmentDescription');
   const plantelSelect = document.getElementById('equipmentPlantel');
   const salonSelect = document.getElementById('equipmentSalon');
   const nameError = document.getElementById('equipmentNameError');
   const previewName = document.getElementById('equipmentPreviewName');
   const previewLocation = document.getElementById('equipmentPreviewLocation');
 
-  if (!mockData || !form || !nameInput || !plantelSelect || !salonSelect) return;
+  if (!salonDataElement || !form || !nameInput || !plantelSelect || !salonSelect) return;
 
-  const planteles = mockData.readPlanteles().filter((plantel) => plantel.activo);
-  const salones = mockData.readSalones().filter((salon) => salon.activo);
-  const activePrograms = mockData.readProgramas().filter((programa) => programa.activo);
-
-  planteles.forEach((plantel) => plantelSelect.add(new Option(plantel.nombre, String(plantel.id))));
+  let salones = [];
+  try {
+    const parsedSalones = JSON.parse(salonDataElement.textContent);
+    salones = Array.isArray(parsedSalones) ? parsedSalones : [];
+  } catch (_error) {
+    salones = [];
+  }
 
   const updatePreview = () => {
-    const salon = salones.find((item) => Number(item.id) === Number(salonSelect.value));
-    const plantel = planteles.find((item) => Number(item.id) === Number(salon?.idPlantel));
+    const salon = salones.find((item) => Number(item.id_salon) === Number(salonSelect.value));
+    const plantelOption = Array.from(plantelSelect.options)
+      .find((option) => Number(option.value) === Number(salon?.id_plantel));
     if (previewName) previewName.textContent = nameInput.value.trim() || 'Equipo pendiente';
-    if (previewLocation) previewLocation.textContent = salon ? `${salon.numero} · ${plantel?.nombre || 'Sin plantel'}` : 'Sin ubicación seleccionada';
+    if (previewLocation) previewLocation.textContent = salon ? `${salon.numero} · ${plantelOption?.textContent || 'Sin plantel'}` : 'Sin ubicación seleccionada';
   };
 
   const refreshSalones = () => {
@@ -33,43 +35,51 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     salones
-      .filter((salon) => Number(salon.idPlantel) === selectedPlantel)
-      .forEach((salon) => salonSelect.add(new Option(salon.numero, String(salon.id))));
+      .filter((salon) => Number(salon.id_plantel) === selectedPlantel)
+      .forEach((salon) => salonSelect.add(new Option(salon.numero, String(salon.id_salon))));
     salonSelect.disabled = false;
+    const requestedSalon = salonSelect.dataset.selectedSalon;
+    if (requestedSalon && Array.from(salonSelect.options).some((option) => option.value === requestedSalon)) {
+      salonSelect.value = requestedSalon;
+    }
     updatePreview();
   };
 
-  const programHint = document.getElementById('equipmentProgramHint');
-  if (programHint) programHint.textContent = `${activePrograms.length} programas activos disponibles para asociación posterior.`;
-
   nameInput.addEventListener('input', updatePreview);
-  plantelSelect.addEventListener('change', refreshSalones);
+  plantelSelect.addEventListener('change', () => {
+    salonSelect.dataset.selectedSalon = '';
+    refreshSalones();
+  });
   salonSelect.addEventListener('change', updatePreview);
 
   form.addEventListener('submit', (event) => {
-    event.preventDefault();
     const numero = nameInput.value.trim();
     const validName = numero.length > 0;
+    const requiresSalon = form.dataset.requiresSalon === 'true';
+    const validSalon = (!requiresSalon && !salonSelect.value)
+      || (Boolean(salonSelect.value)
+        && salones.some((salon) => Number(salon.id_salon) === Number(salonSelect.value)));
     nameError?.classList.toggle('hidden', validName);
     nameInput.classList.toggle('field-error', !validName);
     nameInput.setAttribute('aria-invalid', String(!validName));
-    if (!validName) {
-      nameInput.focus();
+    salonSelect.setAttribute('aria-invalid', String(!validSalon));
+    if (!validName || !validSalon) {
+      event.preventDefault();
+      if (!validName) nameInput.focus();
+      else salonSelect.focus();
       return;
     }
 
-    const equipos = mockData.readEquipos();
-    equipos.push({
-      id: mockData.nextEquipoId(equipos),
-      numero,
-      descripcion: descriptionInput?.value.trim() || '',
-      idSalon: salonSelect.value ? Number(salonSelect.value) : null,
-      activo: true,
-      programas: [],
-    });
-    mockData.writeEquipos(equipos);
-    window.location.assign(form.dataset.listUrl || '/admin/equipos');
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>${form.dataset.submitProgress || 'Guardando...'}`;
+    }
   });
 
+  const selectedSalon = salones.find(
+    (salon) => String(salon.id_salon) === salonSelect.dataset.selectedSalon,
+  );
+  if (selectedSalon) plantelSelect.value = String(selectedSalon.id_plantel);
   refreshSalones();
 });

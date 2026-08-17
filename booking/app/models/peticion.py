@@ -51,6 +51,8 @@ class Peticion(db.Model):
             'id_salon': self.id_salon,
             'id_programa': self.id_programa,
             'materia_nombre': self.materia_nombre,
+            'numero_alumnos': self.numero_alumnos,
+            'software_id': self.software_id,
             'id_tipo_evento': self.id_tipo_evento,
             'nombre_tipo_evento': self.tipo_evento.nombre if self.tipo_evento else None,
             'prioridad_calculada': self.prioridad_calculada,

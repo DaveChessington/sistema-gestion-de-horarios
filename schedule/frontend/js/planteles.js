@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const mockData = window.ScheduleMockData;
+  const dataElement = document.getElementById('plantelData');
+  const actionDataElement = document.getElementById('plantelActionData');
   const searchInput = document.getElementById('plantelSearch');
   const filterButton = document.getElementById('plantelStatusFilter');
   const filterLabel = filterButton?.querySelector('[data-filter-label]');
@@ -11,7 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextButton = document.getElementById('plantelNextPage');
   const currentPageButton = document.getElementById('plantelCurrentPage');
 
-  if (!mockData || !tableBody || !mobileList) return;
+  if (!dataElement || !tableBody || !mobileList) return;
+
+  let plantelRecords = [];
+  let actionContext = {};
+  try {
+    const parsedData = JSON.parse(dataElement.textContent);
+    const parsedActions = JSON.parse(actionDataElement?.textContent || '{}');
+    plantelRecords = Array.isArray(parsedData) ? parsedData : [];
+    actionContext = parsedActions && typeof parsedActions === 'object' ? parsedActions : {};
+  } catch (_error) {
+    plantelRecords = [];
+    actionContext = {};
+  }
 
   const pageSize = 2;
   const states = ['all', 'active', 'inactive'];
@@ -39,23 +52,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const statusBadge = (active) => `<span class="status-badge ${active ? 'status-active' : 'status-inactive'}"><span></span>${active ? 'Activo' : 'Inactivo'}</span>`;
 
+  const canManage = (plantel) => actionContext.role === 'COORDINADOR'
+    || (actionContext.role === 'ADMIN_PLANTEL'
+      && Number(actionContext.assigned_plantel_id) === Number(plantel.id));
+
+  const actionUrl = (template, plantelId, suffix) => String(template || '')
+    .replace(new RegExp(`/0/${suffix}$`), `/${plantelId}/${suffix}`);
+
+  const actionControls = (plantel, mobile = false) => {
+    const plantelId = Number(plantel.id);
+    if (!plantel.activo) {
+      return '<span class="text-xs text-slate-400">Registro inactivo</span>';
+    }
+    if (!canManage(plantel)) {
+      return '<span class="inline-flex items-center gap-2 text-xs text-slate-400"><i class="fa-solid fa-lock"></i>Sin permisos</span>';
+    }
+    if (!Number.isInteger(plantelId) || plantelId <= 0) return '';
+
+    const editUrl = actionUrl(actionContext.edit_url_template, plantelId, 'editar');
+    const deactivateUrl = actionUrl(actionContext.deactivate_url_template, plantelId, 'desactivar');
+    const editClass = mobile
+      ? 'inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600'
+      : 'table-action';
+    const deactivateClass = mobile
+      ? 'inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700'
+      : 'table-action table-action-danger';
+    return `
+      <a href="${escapeHtml(editUrl)}" class="${editClass}" aria-label="Editar ${escapeHtml(plantel.nombre)}"><i class="fa-regular fa-pen-to-square"></i>${mobile ? '<span>Editar</span>' : ''}</a>
+      <form method="post" action="${escapeHtml(deactivateUrl)}" data-deactivate-plantel-form data-plantel-name="${escapeHtml(plantel.nombre)}"${mobile ? ' class="flex-1"' : ''}>
+        <button type="submit" class="${deactivateClass}${mobile ? ' w-full' : ''}" aria-label="Desactivar ${escapeHtml(plantel.nombre)}"><i class="fa-regular fa-trash-can"></i>${mobile ? '<span>Desactivar</span>' : ''}</button>
+      </form>`;
+  };
+
   const tableRow = (plantel) => `
     <tr class="catalog-row">
       <td class="px-6 py-4"><div class="flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">${escapeHtml(initials(plantel.nombre))}</span><div><p class="text-sm font-semibold text-slate-900">${escapeHtml(plantel.nombre)}</p><p class="mt-1 text-xs text-slate-400">ID ${String(plantel.id).padStart(3, '0')}</p></div></div></td>
       <td class="px-6 py-4 text-sm text-slate-600">${escapeHtml(plantel.direccion || 'Sin dirección')}</td>
       <td class="px-6 py-4">${statusBadge(plantel.activo)}</td>
-      <td class="px-6 py-4"><div class="flex justify-end gap-2"><button type="button" aria-disabled="true" class="table-action" aria-label="Ver ${escapeHtml(plantel.nombre)}"><i class="fa-regular fa-eye"></i></button><button type="button" aria-disabled="true" class="table-action" aria-label="Editar ${escapeHtml(plantel.nombre)}"><i class="fa-regular fa-pen-to-square"></i></button><button type="button" aria-disabled="true" class="table-action table-action-danger" aria-label="Desactivar ${escapeHtml(plantel.nombre)}"><i class="fa-regular fa-trash-can"></i></button></div></td>
+      <td class="px-6 py-4"><div class="flex items-center justify-end gap-2">${actionControls(plantel)}</div></td>
     </tr>`;
 
   const mobileCard = (plantel) => `
     <article class="p-5">
       <div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">${escapeHtml(initials(plantel.nombre))}</span><div><h3 class="text-sm font-semibold">${escapeHtml(plantel.nombre)}</h3><p class="mt-1 text-xs text-slate-400">ID ${String(plantel.id).padStart(3, '0')}</p></div></div>${statusBadge(plantel.activo)}</div>
       <p class="mt-4 flex items-center gap-2 text-xs text-slate-500"><i class="fa-solid fa-location-dot text-slate-400"></i>${escapeHtml(plantel.direccion || 'Sin dirección')}</p>
+      <div class="mt-4 flex items-center gap-2">${actionControls(plantel, true)}</div>
     </article>`;
 
   const filteredPlanteles = () => {
     const query = searchInput?.value.trim().toLocaleLowerCase('es') || '';
-    return mockData.readPlanteles().filter((plantel) => {
+    return plantelRecords.filter((plantel) => {
       const matchesQuery = `${plantel.nombre} ${plantel.direccion}`.toLocaleLowerCase('es').includes(query);
       const matchesState = selectedState === 'all'
         || (selectedState === 'active' && plantel.activo)
@@ -98,6 +144,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   previousButton?.addEventListener('click', () => { currentPage -= 1; render(); });
   nextButton?.addEventListener('click', () => { currentPage += 1; render(); });
+  document.addEventListener('submit', (event) => {
+    const form = event.target.closest('[data-deactivate-plantel-form]');
+    if (!form) return;
+    const plantelName = form.dataset.plantelName || 'este plantel';
+    const confirmed = window.confirm(
+      `¿Desactivar ${plantelName}? Sus salones y equipos asociados también quedarán inactivos.`
+    );
+    if (!confirmed) {
+      event.preventDefault();
+      return;
+    }
+    const button = form.querySelector('button[type="submit"]');
+    if (button) {
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+    }
+  });
 
   render();
 });
