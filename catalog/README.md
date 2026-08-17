@@ -58,18 +58,24 @@ All routes are mounted under `/api/v1` (see `catalog/app/routes/catalog_routes.p
 | `POST`   | `/equipos/<int:id_equipo>/software` | Assign a software program to an equipment | Same as `POST` |
 | `DELETE` | `/equipos/<int:id_equipo>/software/<int:id_programa>` | Remove a software program from an equipment | Same as `POST` |
 
+`ADMIN_PLANTEL` and `ENCARGADO` can only manage equipment associated with a
+salon in their assigned plantel. Equipment without a salon has no tenant scope,
+so creating, updating, deleting, or changing its software requires the global
+`ADMINISTRADOR` or `COORDINADOR` role.
+
 ### Programas (Software)
 | Method | URL | Description | Roles |
 |--------|-----|-------------|-------|
-| `POST`   | `/programas` | Create a software program | `ADMINISTRADOR`, `COORDINADOR` |
+| `POST`   | `/programas` | Create a software program | `ADMINISTRADOR`, `COORDINADOR`, `ADMIN_PLANTEL`, `ENCARGADO` |
 | `GET`    | `/programas` | List programs | Public |
 | `GET`    | `/programas/<int:id_programa>` | Retrieve a program | Public |
-| `PUT`    | `/programas/<int:id_programa>` | Update program | `ADMINISTRADOR`, `COORDINADOR` |
-| `DELETE` | `/programas/<int:id_programa>` | Soft‑delete program | `ADMINISTRADOR`, `COORDINADOR` |
+| `PUT`    | `/programas/<int:id_programa>` | Update program | Same as `POST` |
+| `DELETE` | `/programas/<int:id_programa>` | Soft‑delete program | Same as `POST` |
 
 All endpoints return JSON and use proper HTTP status codes (`201`, `200`, `400`, `403`, `404`, `500`). Permission checks are performed via:
 - Flask decorators `@login_required` and `@require_roles`
-- Service‑level helper `check_user_plantel_access(current_user, target_plantel_id)`
+- Service‑level helpers `check_user_plantel_access(...)` and
+  `EquipmentService.check_user_access(...)`
 
 ---
 

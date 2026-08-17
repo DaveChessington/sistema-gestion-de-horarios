@@ -1,0 +1,54 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}{{ 'Editar' if is_edit else 'Nuevo' }} usuario • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<section><p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Cuenta institucional</p><h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{{ 'Editar usuario' if is_edit else 'Nuevo usuario' }}</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{{ 'Actualiza la información, credenciales o alcance de acceso.' if is_edit else 'Captura visual de información personal, credenciales y alcance de acceso.' }}</p></section>
+
+{% if form_error %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible {{ 'actualizar' if is_edit else 'registrar' }} el usuario.</p><p class="mt-1">{{ form_error }}</p><p class="mt-1 text-xs">Por seguridad, vuelve a capturar la contraseña si deseas cambiarla.</p></div></div>
+{% endif %}
+
+<form id="userForm" method="post" action="{{ form_action }}" data-edit-mode="{{ 'true' if is_edit else 'false' }}" data-requires-plantel="{{ 'true' if requires_plantel else 'false' }}" class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" novalidate>
+  <div class="space-y-6">
+    <section class="form-section">
+      <div class="form-section-heading"><span class="form-section-number">1</span><div><h3>Información personal</h3><p>Datos generales que identificarán al usuario.</p></div></div>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2">
+        <label class="form-field" for="userName"><span>Nombre <strong>*</strong></span><input id="userName" name="nombre" type="text" value="{{ form_values.nombre }}" placeholder="Nombre del usuario" autocomplete="given-name" required><small id="userNameError" class="hidden text-red-600" role="alert">El nombre es obligatorio.</small></label>
+        <label class="form-field" for="userLastName"><span>Apellido <strong>*</strong></span><input id="userLastName" name="apellido" type="text" value="{{ form_values.apellido }}" placeholder="Apellido del usuario" autocomplete="family-name" required><small id="userLastNameError" class="hidden text-red-600" role="alert">El apellido es obligatorio.</small></label>
+        <label class="form-field sm:col-span-2" for="userEmail"><span>Correo institucional <strong>*</strong></span><div class="form-input-icon"><i class="fa-regular fa-envelope"></i><input id="userEmail" name="correo" type="email" value="{{ form_values.correo }}" placeholder="nombre@institucion.edu.mx" autocomplete="email" required></div><small id="userEmailHelp">Se utilizará como identificador de acceso.</small><small id="userEmailError" class="hidden text-red-600" role="alert"></small></label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-heading"><span class="form-section-number">2</span><div><h3>Credenciales de acceso</h3><p>Configuración visual de la contraseña inicial.</p></div></div>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2">
+        <label class="form-field" for="userPassword"><span>Contraseña {% if not is_edit %}<strong>*</strong>{% endif %}</span><div class="form-input-icon"><i class="fa-solid fa-lock"></i><input id="userPassword" name="password" type="password" placeholder="••••••••••••" autocomplete="new-password" minlength="12" maxlength="72"{% if not is_edit %} required{% endif %}></div><small id="userPasswordError" class="hidden text-red-600" role="alert">Usa 12 a 72 caracteres, mayúscula, minúscula, número y símbolo.</small>{% if is_edit %}<small>Déjala vacía para conservar la contraseña actual.</small>{% endif %}</label>
+        <label class="form-field" for="userPasswordConfirm"><span>Confirmar contraseña {% if not is_edit %}<strong>*</strong>{% endif %}</span><div class="form-input-icon"><i class="fa-solid fa-lock"></i><input id="userPasswordConfirm" name="password_confirmation" type="password" placeholder="••••••••" autocomplete="new-password"{% if not is_edit %} required{% endif %}></div><small id="userPasswordConfirmError" class="hidden text-red-600" role="alert">Las contraseñas deben coincidir.</small></label>
+      </div>
+      <div class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4"><p class="text-xs font-semibold text-blue-900"><i class="fa-solid fa-shield-halved mr-2 text-blue-600"></i>Protección de credenciales</p><div class="mt-3 grid gap-2 text-xs text-blue-700 sm:grid-cols-2"><span><i class="fa-regular fa-circle-check mr-2"></i>12 a 72 caracteres</span><span><i class="fa-regular fa-circle-check mr-2"></i>Mayúscula, minúscula, número y símbolo</span><span><i class="fa-solid fa-shield mr-2"></i>bcrypt con costo 12 en IAM</span><span><i class="fa-solid fa-rotate-left mr-2"></i>No se repuebla tras un error</span></div></div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-heading"><span class="form-section-number">3</span><div><h3>Rol y alcance</h3><p>Permisos representados según la estructura actual de IAM.</p></div></div>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2">
+        <label class="form-field" for="userRole"><span>Rol <strong>*</strong></span><div class="form-select"><i class="fa-solid fa-user-tag"></i><select id="userRole" name="rol" class="w-full bg-transparent text-sm outline-none" required{% if lock_scope_fields %} disabled{% endif %}><option value="">Seleccionar rol</option>{% for role_value, role_label in available_roles %}<option value="{{ role_value }}"{% if form_values.rol == role_value %} selected{% endif %}>{{ role_label }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>{% if lock_scope_fields %}<input type="hidden" name="rol" value="{{ form_values.rol }}">{% endif %}<small id="userRoleError" class="hidden text-red-600" role="alert">Selecciona un rol.</small></label>
+        <label class="form-field" for="userPlantel"><span>Plantel asignado</span><div class="form-select"><i class="fa-solid fa-building-columns"></i><select id="userPlantel" name="id_plantel_asignado" class="w-full bg-transparent text-sm outline-none"{% if lock_scope_fields %} disabled{% endif %}><option value="">Sin plantel asignado</option>{% for plantel in planteles %}<option value="{{ plantel.id }}"{% if form_values.id_plantel_asignado == plantel.id|string %} selected{% endif %}>{{ plantel.nombre }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>{% if lock_scope_fields %}<input type="hidden" name="id_plantel_asignado" value="{{ form_values.id_plantel_asignado }}">{% endif %}<small id="userPlantelError" class="hidden text-red-600" role="alert">Selecciona un plantel permitido para el alcance del usuario.</small></label>
+      </div>
+      <div class="mt-5 grid gap-3 sm:grid-cols-2">{% if available_roles[0][0] == 'COORDINADOR' %}<div class="role-help"><span class="role-badge role-coordinator">Coordinador</span><p>Acceso global; plantel opcional.</p></div>{% endif %}<div class="role-help"><span class="role-badge role-campus">Admin. plantel</span><p>Requiere un plantel asignado.</p></div><div class="role-help"><span class="role-badge role-teacher">Docente</span><p>Usará la consulta pública personalizada.</p></div><div class="role-help"><span class="role-badge role-student">Alumno</span><p>Usará la consulta pública personalizada.</p></div></div>
+    </section>
+
+    <section class="form-section"><div class="flex items-start justify-between gap-4"><div><h3 class="text-sm font-semibold text-slate-900">Estado de la cuenta</h3><p class="mt-1 text-xs leading-5 text-slate-500">{{ 'La edición conserva el estado actual de la cuenta.' if is_edit else 'La cuenta se mostrará activa al completar el registro.' }}</p></div><span class="visual-toggle" aria-label="Estado {{ 'activo' if not is_edit or target_user.activo else 'inactivo' }}"><span></span></span></div></section>
+    <div class="form-actions"><a href="{{ url_for('admin.usuarios') }}" class="button-secondary">Cancelar</a><button type="submit" class="button-primary"><i class="fa-solid {{ 'fa-floppy-disk' if is_edit else 'fa-user-plus' }}"></i>{{ 'Guardar cambios' if is_edit else 'Registrar usuario' }}</button></div>
+  </div>
+
+  <aside class="space-y-5 xl:sticky xl:top-28 xl:self-start">
+    <section class="rounded-3xl bg-slate-900 p-6 text-white shadow-xl shadow-slate-300"><p class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-300">Vista previa</p><div class="mt-5 flex items-center gap-3"><span id="userPreviewInitials" class="user-avatar h-12 w-12 bg-blue-500/20 text-blue-200">NU</span><div><h3 id="userPreviewName" class="text-sm font-semibold">{{ 'Usuario existente' if is_edit else 'Nuevo usuario' }}</h3><p id="userPreviewEmail" class="mt-1 text-xs text-slate-400">Correo pendiente</p></div></div><div class="mt-6 space-y-3 border-t border-white/10 pt-5"><div class="flex justify-between text-xs"><span class="text-slate-400">Rol</span><span id="userPreviewRole" class="font-semibold">Sin seleccionar</span></div><div class="flex justify-between text-xs"><span class="text-slate-400">Plantel</span><span id="userPreviewPlantel" class="font-semibold">Sin seleccionar</span></div><div class="flex justify-between text-xs"><span class="text-slate-400">Estado</span><span class="font-semibold {{ 'text-emerald-300' if not is_edit or target_user.activo else 'text-slate-300' }}">{{ 'Activo' if not is_edit or target_user.activo else 'Inactivo' }}</span></div></div></section>
+    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><span class="interface-state-icon bg-amber-50 text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i></span><h3 class="mt-4 text-sm font-semibold">Administración de identidad</h3><p class="mt-2 text-xs leading-5 text-slate-500">Los cambios se validan en IAM y respetan el rol y plantel de tu sesión.</p></section>
+  </aside>
+</form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/usuario-form.js') }}"></script>
+{% endblock %}

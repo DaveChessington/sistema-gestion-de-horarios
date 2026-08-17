@@ -1,0 +1,42 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Salones • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<section class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">Espacios académicos</p><h2 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Salones</h2><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Organiza los salones, su capacidad y el plantel al que pertenecen.</p></div>
+          <a href="{{ url_for('admin.salon_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200"><i class="fa-solid fa-plus"></i>Nuevo salón</a>
+        </section>
+
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+          {% if category in ['success', 'error'] %}<div class="mt-6 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm {% if category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-red-200 bg-red-50 text-red-800{% endif %}" role="status"><i class="fa-solid {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} mt-0.5"></i><p>{{ message }}</p></div>{% endif %}
+        {% endfor %}
+
+        {% if catalog_error %}
+          <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible consultar los salones.</p><p class="mt-1">{{ catalog_error }}</p></div></div>
+        {% endif %}
+
+        <section class="mt-6 grid gap-4 sm:grid-cols-3">
+          <article class="admin-stat-card"><p class="admin-stat-label">Salones visibles</p><div class="mt-3 flex items-end justify-between"><p id="salonVisibleCount" class="admin-stat-value">0</p><span class="admin-stat-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-door-open"></i></span></div></article>
+          <article class="admin-stat-card"><p class="admin-stat-label">Capacidad total</p><div class="mt-3 flex items-end justify-between"><p id="salonCapacityTotal" class="admin-stat-value">0</p><span class="admin-stat-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-users"></i></span></div></article>
+          <article class="admin-stat-card"><p class="admin-stat-label">Fuera de servicio</p><div class="mt-3 flex items-end justify-between"><p id="salonInactiveCount" class="admin-stat-value">0</p><span class="admin-stat-icon bg-amber-50 text-amber-600"><i class="fa-solid fa-screwdriver-wrench"></i></span></div></article>
+        </section>
+
+        <section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:p-5 md:flex-row md:items-center md:justify-between">
+            <div class="relative w-full md:max-w-md"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i><input id="salonSearch" type="search" aria-label="Buscar salón" placeholder="Buscar por número o descripción" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none placeholder:text-slate-400" /></div>
+            <div class="flex gap-2"><button id="salonPlantelFilter" type="button" class="filter-button"><i class="fa-solid fa-building-columns text-slate-400"></i><span data-filter-label>Plantel: todos</span><i class="fa-solid fa-chevron-down text-[10px]"></i></button><button id="salonStatusFilter" type="button" class="filter-button"><i class="fa-solid fa-filter text-slate-400"></i><span data-filter-label>Estado: todos</span></button></div>
+          </div>
+
+          <div id="salonCardGrid" class="grid gap-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3"></div>
+          <div class="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><p id="salonResultCount" class="text-xs text-slate-500">Preparando listado de salones...</p><nav class="flex gap-1" aria-label="Paginación"><button id="salonPreviousPage" type="button" class="pagination-button"><i class="fa-solid fa-chevron-left"></i></button><button id="salonCurrentPage" type="button" class="pagination-button pagination-button-active">1</button><button id="salonNextPage" type="button" class="pagination-button"><i class="fa-solid fa-chevron-right"></i></button></nav></div>
+        </section>
+        <p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>La edición y desactivación se procesan mediante Catalog. Desactivar un salón también desactiva lógicamente sus equipos asociados.</p>
+        <script id="salonData" type="application/json">{{ salones|tojson }}</script>
+        <script id="salonPlantelData" type="application/json">{{ planteles|tojson }}</script>
+        <script id="salonActionData" type="application/json">{{ salon_action_context|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/salones.js') }}"></script>
+{% endblock %}

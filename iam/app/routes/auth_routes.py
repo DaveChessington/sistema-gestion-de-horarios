@@ -1,18 +1,19 @@
 from flask import Blueprint, request, jsonify
-from app.models.usuario import Usuario
 from app.services.auth_service import AuthService
 from app.utils.security import login_required, role_required
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 @auth_bp.route('/register', methods=['POST'], strict_slashes=False)
-def register():
-    """Ruta para registrar nuevos usuarios."""
+@login_required
+@role_required('COORDINADOR', 'ADMIN_PLANTEL')
+def register(current_user_payload):
+    """Ruta administrativa para registrar nuevos usuarios."""
     datos = request.get_json()
     if not datos:
         return jsonify({'error': 'No se enviaron datos en la petición'}), 400
         
-    resultado = AuthService.register_user(datos)
+    resultado = AuthService.register_user(datos, current_user_payload)
     if not resultado['success']:
         return jsonify({'error': resultado['error']}), resultado['status_code']
         
@@ -39,9 +40,44 @@ def login():
 @login_required
 @role_required('COORDINADOR', 'ADMIN_PLANTEL')
 def list_users(current_user_payload):
-    """Ruta para listar todos los usuarios registrados."""
-    usuarios = Usuario.query.all()
-    return jsonify({'usuarios': [u.to_dict() for u in usuarios]}), 200
+    """Lista usuarios dentro del alcance administrativo del JWT."""
+    resultado = AuthService.list_users(current_user_payload)
+    if not resultado['success']:
+        return jsonify({'error': resultado['error']}), resultado['status_code']
+    return jsonify({'usuarios': resultado['data']}), 200
+
+
+@auth_bp.route('/users/<int:user_id>', methods=['GET'], strict_slashes=False)
+@login_required
+@role_required('COORDINADOR', 'ADMIN_PLANTEL')
+def get_user(current_user_payload, user_id):
+    resultado = AuthService.get_user(user_id, current_user_payload)
+    if not resultado['success']:
+        return jsonify({'error': resultado['error']}), resultado['status_code']
+    return jsonify({'usuario': resultado['data']}), 200
+
+
+@auth_bp.route('/users/<int:user_id>', methods=['PUT'], strict_slashes=False)
+@login_required
+@role_required('COORDINADOR', 'ADMIN_PLANTEL')
+def update_user(current_user_payload, user_id):
+    datos = request.get_json()
+    if not datos:
+        return jsonify({'error': 'No se enviaron datos en la petición'}), 400
+    resultado = AuthService.update_user(user_id, datos, current_user_payload)
+    if not resultado['success']:
+        return jsonify({'error': resultado['error']}), resultado['status_code']
+    return jsonify({'mensaje': 'Usuario actualizado exitosamente', 'usuario': resultado['data']}), 200
+
+
+@auth_bp.route('/users/<int:user_id>', methods=['DELETE'], strict_slashes=False)
+@login_required
+@role_required('COORDINADOR', 'ADMIN_PLANTEL')
+def deactivate_user(current_user_payload, user_id):
+    resultado = AuthService.deactivate_user(user_id, current_user_payload)
+    if not resultado['success']:
+        return jsonify({'error': resultado['error']}), resultado['status_code']
+    return jsonify({'mensaje': 'Usuario desactivado exitosamente', 'usuario': resultado['data']}), 200
 
 @auth_bp.route('/me', methods=['GET'], strict_slashes=False)
 @login_required

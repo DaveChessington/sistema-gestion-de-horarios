@@ -1,0 +1,191 @@
+{% extends "layouts/public.html" %}
+
+{% block title %}Consulta de horarios • UDL{% endblock %}
+{% block body_attributes %} data-schedule-view="public"{% endblock %}
+
+{% block content %}
+  {% set current_user = session.get('iam_user') %}
+  <header class="public-header sticky top-0 z-40 border-b border-slate-800 bg-slate-950 text-white">
+    <div class="mx-auto flex h-16 max-w-[90rem] items-center justify-between gap-4 px-4 sm:px-6 lg:h-20 lg:px-8">
+      <a href="{{ url_for('public.schedules') }}" class="flex min-w-0 items-center gap-3" aria-label="Inicio de consulta pública">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-950/50 sm:h-11 sm:w-11 sm:rounded-2xl">
+          <i class="fa-solid fa-calendar-days"></i>
+        </span>
+        <div class="min-w-0">
+          <p class="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300 sm:text-xs">Universidad de León</p>
+          <p class="mt-0.5 truncate text-xs font-semibold text-white sm:text-sm">Consulta de horarios</p>
+        </div>
+      </a>
+
+      <nav class="hidden items-center gap-1 md:flex" aria-label="Navegación pública">
+        <a href="{{ url_for('public.schedules') }}" aria-current="page" class="rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold text-white">Horarios</a>
+        <span class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400">Espacios</span>
+        <span class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400">Disponibilidad</span>
+      </nav>
+
+      {% if current_user %}
+        <div class="flex items-center gap-2">
+          <span class="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200 lg:inline-flex"><i class="fa-regular fa-user text-blue-300"></i><span class="max-w-32 truncate">{{ current_user.get('nombre', 'Usuario') }}</span><strong class="text-[10px] uppercase tracking-wide text-slate-400">{{ current_user.get('rol', '')|replace('_', ' ') }}</strong></span>
+          {% if current_user.get('rol') in ['COORDINADOR', 'ADMIN_PLANTEL'] %}
+            <a id="publicAdminReturn" href="{{ url_for('admin.dashboard') }}" class="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/15 px-3 py-2.5 text-xs font-semibold text-blue-100 transition hover:bg-blue-500/25"><i class="fa-solid fa-arrow-left"></i><span class="hidden sm:inline">Volver al panel</span></a>
+          {% endif %}
+          <form method="post" action="{{ url_for('public.logout') }}">
+            <button id="publicSessionLogout" type="submit" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-white/15 sm:px-4"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="hidden sm:inline">Cerrar sesión</span></button>
+          </form>
+        </div>
+      {% else %}
+        <a id="publicLoginLink" href="{{ url_for('public.login') }}" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-white/15 sm:px-4">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span class="hidden sm:inline">Iniciar sesión</span>
+        </a>
+      {% endif %}
+    </div>
+  </header>
+
+  {% for message in get_flashed_messages(category_filter=['role_notice']) %}
+    <div id="rolePermissionNotice" class="fixed right-4 top-20 z-50 w-[calc(100%-2rem)] max-w-md rounded-2xl border border-blue-200 bg-white p-4 text-sm text-slate-700 shadow-xl shadow-slate-900/15 sm:right-6 sm:top-24" role="status" aria-live="polite">
+      <div class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><i class="fa-solid fa-circle-info"></i></span><div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Acceso según tu perfil</p><p class="mt-1 leading-5">{{ message }}</p></div><button id="rolePermissionNoticeClose" type="button" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Cerrar aviso"><i class="fa-solid fa-xmark"></i></button></div>
+    </div>
+  {% endfor %}
+
+  <main>
+    <section class="public-hero border-b border-slate-200">
+      <div class="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+        <div class="flex flex-col justify-between gap-8 xl:flex-row xl:items-end">
+          <div class="max-w-3xl">
+            <span class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+              Consulta pública
+            </span>
+            <h1 class="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">Consulta espacios y horarios académicos</h1>
+            <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">Revisa la ocupación semanal de los espacios universitarios sin necesidad de iniciar sesión.</p>
+          </div>
+
+          <div class="rounded-2xl border px-4 py-3 text-xs leading-5{% if schedule_error %} border-red-200 bg-red-50 text-red-800{% else %} border-emerald-200 bg-emerald-50 text-emerald-800{% endif %}">
+            <div class="flex items-start gap-2">
+              <i class="fa-solid {% if schedule_error %}fa-triangle-exclamation{% else %}fa-cloud-arrow-down{% endif %} mt-0.5"></i>
+              {% if schedule_error %}
+                <p><strong>Consulta no disponible:</strong> no fue posible obtener los horarios desde Booking.</p>
+              {% else %}
+                <p><strong>Booking conectado:</strong> la ocupación mostrada proviene del servicio de horarios.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="mx-auto max-w-[90rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <form class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="filters-title" data-schedule-filters data-schedule-api-url="{{ url_for('public.schedule_data') }}" data-filter-options-url="{{ url_for('public.schedule_filter_options') }}">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-end">
+          <div class="flex-1">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p id="filters-title" class="text-sm font-semibold text-slate-900"><i class="fa-solid fa-sliders mr-2 text-blue-600"></i>Filtros de consulta</p>
+                <p class="mt-1 text-xs text-slate-400">Selecciona los criterios para encontrar un horario.</p>
+              </div>
+              <button type="reset" data-filter-reset class="hidden text-xs font-semibold text-blue-600 sm:inline-flex">Restablecer filtros</button>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label class="public-filter">
+                <span>Plantel</span>
+                <span class="public-select-value"><i class="fa-solid fa-building-columns"></i><select name="id_plantel" data-filter-plantel aria-label="Plantel"><option value="">Todos los planteles</option></select><i class="fa-solid fa-chevron-down"></i></span>
+              </label>
+              <label class="public-filter">
+                <span>Salón</span>
+                <span class="public-select-value"><i class="fa-solid fa-door-open"></i><select name="id_salon" data-filter-salon aria-label="Salón"><option value="">Todos los salones</option></select><i class="fa-solid fa-chevron-down"></i></span>
+              </label>
+              <label class="public-filter">
+                <span>Programa</span>
+                <span class="public-select-value"><i class="fa-solid fa-graduation-cap"></i><select name="id_programa" data-filter-programa aria-label="Programa"><option value="">Todos los programas</option></select><i class="fa-solid fa-chevron-down"></i></span>
+              </label>
+              <label class="public-filter">
+                <span>Día</span>
+                <span class="public-select-value"><i class="fa-regular fa-calendar"></i><input type="date" name="fecha_reserva" value="{{ filter_values.get('fecha_reserva', filter_values.get('fecha', '')) }}" aria-label="Fecha de reserva"></span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" data-filter-submit class="inline-flex h-[3.1rem] items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-200 disabled:cursor-wait disabled:opacity-60">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            Consultar
+          </button>
+        </div>
+        <p class="mt-3 hidden text-xs text-slate-500" data-schedule-filter-status role="status" aria-live="polite"></p>
+      </form>
+
+      <section class="mt-6" aria-labelledby="schedule-title">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Semana académica</p>
+            <h2 id="schedule-title" class="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">Disponibilidad de espacios</h2>
+            <p class="mt-1 text-sm text-slate-500" data-schedule-summary>Todos los planteles · Todos los salones</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-semibold shadow-sm">
+            <span class="flex items-center gap-2 text-emerald-700"><span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>Libre</span>
+            <span class="flex items-center gap-2 text-red-700"><span class="h-2.5 w-2.5 rounded-full bg-red-400"></span>Ocupado</span>
+            <span class="flex items-center gap-2 text-amber-700"><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>Mantenimiento</span>
+          </div>
+        </div>
+
+        <div class="schedule-period-switcher mt-5" role="tablist" aria-label="Seleccionar turno">
+          <button type="button" class="schedule-period-button is-active" role="tab" aria-selected="true" data-period-target="morning">
+            <i class="fa-solid fa-sun"></i><span>Turno Matutino</span><small>7:00 a 13:50</small>
+          </button>
+          <button type="button" class="schedule-period-button" role="tab" aria-selected="false" data-period-target="afternoon">
+            <i class="fa-solid fa-cloud-sun"></i><span>Turno Vespertino</span><small>16:00 a 21:50</small>
+          </button>
+        </div>
+
+          <div id="bookingScheduleError" class="mt-5 rounded-3xl border border-red-200 bg-red-50 p-6 text-red-800{% if not schedule_error %} hidden{% endif %}" role="alert" data-schedule-error>
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+              <div><h3 class="font-semibold">No fue posible consultar los horarios</h3><p class="mt-1 text-sm" data-schedule-error-message>{{ schedule_error or '' }}</p></div>
+            </div>
+          </div>
+        <div class="mt-5 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block" data-schedule-panel>
+          <div class="overflow-x-auto">
+            <table class="public-schedule-table w-full min-w-[1050px] border-collapse text-left">
+              <thead>
+                <tr class="bg-slate-900 text-xs font-semibold text-white">
+                  <th class="w-32 px-4 py-4 text-center"><i class="fa-regular fa-clock mr-2 text-slate-400"></i>Hora</th>
+                  <th class="px-3 py-4 text-center">Lunes</th>
+                  <th class="px-3 py-4 text-center">Martes</th>
+                  <th class="px-3 py-4 text-center">Miércoles</th>
+                  <th class="px-3 py-4 text-center">Jueves</th>
+                  <th class="px-3 py-4 text-center">Viernes</th>
+                </tr>
+              </thead>
+              <tbody data-schedule-body></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-5 space-y-4 lg:hidden" data-schedule-mobile></div>
+      </section>
+
+      <section class="mt-8" aria-labelledby="states-title">
+        <div><p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Estados del sistema</p><h2 id="states-title" class="mt-2 text-lg font-semibold">Escenarios de consulta</h2></div>
+        <div class="mt-4 grid gap-4 md:grid-cols-3">
+          <article class="interface-state-card"><span class="interface-state-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-spinner"></i></span><div><h3>Cargando horarios</h3><p>Se mostrará mientras se obtiene la información de la consulta.</p></div></article>
+          <article class="interface-state-card"><span class="interface-state-icon bg-slate-100 text-slate-500"><i class="fa-regular fa-calendar-xmark"></i></span><div><h3>Sin resultados</h3><p>Aparecerá cuando no existan horarios con los filtros seleccionados.</p></div></article>
+          <article class="interface-state-card"><span class="interface-state-icon bg-red-50 text-red-600"><i class="fa-solid fa-triangle-exclamation"></i></span><div><h3>No fue posible consultar</h3><p>Informará de forma clara cuando el servicio no esté disponible.</p></div></article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="mt-6 border-t border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-[90rem] flex-col gap-2 px-4 py-6 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+      <p>Sistema de Gestión de Horarios · Universidad de León</p>
+      <p>Consulta pública de espacios académicos</p>
+    </div>
+  </footer>
+{% endblock %}
+
+{% block scripts %}
+  <script id="bookingScheduleData" type="application/json">{{ schedule_records|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/schedule-view.js') }}"></script>
+{% endblock %}

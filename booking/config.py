@@ -23,3 +23,4 @@ class Config:
     
     # Comunicación entre servicios
     CATALOG_SERVICE_URL = os.environ.get('CATALOG_SERVICE_URL', 'http://127.0.0.1:5002')
+    CATALOG_REQUEST_TIMEOUT = float(os.environ.get('CATALOG_REQUEST_TIMEOUT', '5'))

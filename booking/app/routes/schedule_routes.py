@@ -9,11 +9,12 @@ def schedule_grid():
     """
     Endpoint GET /api/v1/schedule/grid
     Retorna la cuadrícula/matriz de horarios ocupados en formato JSON.
-    Query params opcionales: id_plantel, id_salon, fecha, fecha_reserva
+    Query params opcionales: id_plantel, id_salon, id_programa, fecha, fecha_reserva
     """
     filters = {
         'id_plantel': request.args.get('id_plantel'),
         'id_salon': request.args.get('id_salon'),
+        'id_programa': request.args.get('id_programa'),
         'fecha': request.args.get('fecha'),
         'fecha_reserva': request.args.get('fecha_reserva')
     }

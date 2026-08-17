@@ -3,6 +3,8 @@ from booking.app.utils.security import login_required
 from booking.app.services.booking_service import (
     create_booking_request,
     get_booking_history,
+    get_booking_request,
+    update_booking_request,
     cancel_booking_request
 )
 
@@ -66,4 +68,27 @@ def cancel_booking(current_user_payload, id_peticion):
     Cancela una reserva existente y libera el espacio en la base de datos.
     """
     response, status_code = cancel_booking_request(id_peticion, current_user_payload)
+    return jsonify(response), status_code
+
+
+@booking_bp.route('/booking/request/<int:id_peticion>', methods=['GET'])
+@login_required
+def booking_request_detail(current_user_payload, id_peticion):
+    """Consulta una petición respetando propiedad y alcance administrativo."""
+    response, status_code = get_booking_request(id_peticion, current_user_payload)
+    return jsonify(response), status_code
+
+
+@booking_bp.route('/booking/request/<int:id_peticion>', methods=['PATCH', 'PUT'])
+@login_required
+def update_booking(current_user_payload, id_peticion):
+    """Actualiza o reprograma una reserva sin omitir colisiones ni prioridad."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Payload JSON no proporcionado'}), 400
+    response, status_code = update_booking_request(
+        id_peticion,
+        data,
+        current_user_payload,
+    )
     return jsonify(response), status_code

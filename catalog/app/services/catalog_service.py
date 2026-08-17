@@ -209,6 +209,22 @@ class CampusService:
 
 
 class EquipmentService:
+    GLOBAL_ROLES = {'ADMINISTRADOR', 'COORDINADOR'}
+
+    @staticmethod
+    def check_user_access(equipo, current_user=None):
+        """Resuelve el plantel del equipo y rechaza recursos sin alcance local."""
+        if not current_user:
+            return
+        if equipo.id_salon:
+            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
+            check_user_plantel_access(current_user, salon.id_plantel)
+            return
+        if current_user.get('rol') not in EquipmentService.GLOBAL_ROLES:
+            raise PermissionDeniedException(
+                "Solo administradores globales pueden gestionar equipos sin salón asignado."
+            )
+
     @staticmethod
     def create_equipment(numero, descripcion, id_salon=None, current_user=None):
         if not numero or not str(numero).strip():
@@ -225,6 +241,10 @@ class EquipmentService:
             salon = CampusService.get_salon_by_id(id_salon, active_only=True)
             if current_user:
                 check_user_plantel_access(current_user, salon.id_plantel)
+        elif current_user and current_user.get('rol') not in EquipmentService.GLOBAL_ROLES:
+            raise PermissionDeniedException(
+                "Solo administradores globales pueden crear equipos sin salón asignado."
+            )
 
         equipo = Equipo(
             numero=numero_clean,
@@ -260,9 +280,7 @@ class EquipmentService:
     def update_equipment(id_equipo, numero, descripcion, id_salon=None, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
         
-        if current_user and equipo.id_salon:
-            current_salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
-            check_user_plantel_access(current_user, current_salon.id_plantel)
+        EquipmentService.check_user_access(equipo, current_user)
 
         if not numero or not str(numero).strip():
             raise InvalidDataException("El número de inventario no puede estar vacío.")
@@ -279,6 +297,10 @@ class EquipmentService:
             target_salon = CampusService.get_salon_by_id(id_salon, active_only=True)
             if current_user:
                 check_user_plantel_access(current_user, target_salon.id_plantel)
+        elif current_user and current_user.get('rol') not in EquipmentService.GLOBAL_ROLES:
+            raise PermissionDeniedException(
+                "Solo administradores globales pueden dejar equipos sin salón asignado."
+            )
 
         equipo.numero = numero_clean
         equipo.descripcion = descripcion
@@ -289,9 +311,7 @@ class EquipmentService:
     @staticmethod
     def delete_equipment(id_equipo, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
-        if current_user and equipo.id_salon:
-            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
-            check_user_plantel_access(current_user, salon.id_plantel)
+        EquipmentService.check_user_access(equipo, current_user)
 
         equipo.activo = False
         db.session.commit()
@@ -300,9 +320,7 @@ class EquipmentService:
     @staticmethod
     def assign_software(id_equipo, id_programa, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
-        if current_user and equipo.id_salon:
-            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
-            check_user_plantel_access(current_user, salon.id_plantel)
+        EquipmentService.check_user_access(equipo, current_user)
 
         programa = ProgramService.get_program_by_id(id_programa, active_only=True)
         
@@ -316,9 +334,7 @@ class EquipmentService:
     @staticmethod
     def remove_software(id_equipo, id_programa, current_user=None):
         equipo = EquipmentService.get_equipment_by_id(id_equipo, active_only=True)
-        if current_user and equipo.id_salon:
-            salon = CampusService.get_salon_by_id(equipo.id_salon, active_only=True)
-            check_user_plantel_access(current_user, salon.id_plantel)
+        EquipmentService.check_user_access(equipo, current_user)
 
         programa = ProgramService.get_program_by_id(id_programa, active_only=True)
         
