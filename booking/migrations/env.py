@@ -65,7 +65,7 @@ def run_migrations_offline():
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
+        url=url, target_metadata=get_metadata(), literal_binds=True, version_table='alembic_version_booking'
     )
 
     with context.begin_transaction():
@@ -90,18 +90,9 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
-    def include_name(name, type_, parent_names):
-        if type_ == "schema":
-            return name in ["reservas"]
-        return True
-
     conf_args = current_app.extensions['migrate'].configure_args
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
-    if "include_schemas" not in conf_args:
-        conf_args["include_schemas"] = True
-    if "include_name" not in conf_args:
-        conf_args["include_name"] = include_name
 
     connectable = get_engine()
 
@@ -109,6 +100,7 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
+            version_table='alembic_version_booking',
             **conf_args
         )
 

@@ -80,32 +80,6 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: postgres_db
-      DB_PORT: 5432
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-root}
-      DB_NAME: ${DB_NAME:-gestion_horarios_udl}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      CATALOG_SERVICE_URL: http://catalog:5002
-    depends_on:
-      postgres_db:
-        condition: service_healthy
-      catalog:
-        condition: service_started
-    networks:
-      - backend_net
-
-  booking:
-    build:
-      context: ./booking
-      dockerfile: Dockerfile
-    container_name: booking
-    restart: always
-    ports:
-      - "${BOOKING_PORT:-5003}:5003"
-    env_file:
-      - .env
-    environment:
       BOOKING_PORT: 5003
       DB_HOST: postgres_db
       DB_PORT: 5432
@@ -116,8 +90,10 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${SECRET_KEY:-super-secret-key-udl}}
       CATALOG_SERVICE_URL: http://catalog:5002
     depends_on:
-      - postgres_db
-      - catalog
+      postgres_db:
+        condition: service_healthy
+      catalog:
+        condition: service_started
     networks:
       - backend_net
 

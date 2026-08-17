@@ -126,6 +126,37 @@ The output will show each request and its response.
 
 ---
 
+---
+
+## Database Migrations (Flask-Migrate / Alembic)
+
+This service uses **Flask-Migrate** (`Flask-Migrate==4.1.0`, `alembic==1.19.1`) to version-control all schema changes in the `catalogos` PostgreSQL schema.  
+Migrations live in `catalog/migrations/versions/` and are applied automatically by `entrypoint.sh` on each container start.
+
+### Migration commands (run from the project root)
+
+```powershell
+# Apply pending migrations (run on every deploy / container start)
+$env:PYTHONPATH = "."
+.\\catalog\\venv\\Scripts\\python.exe -m flask --app catalog.app:create_app db upgrade -d catalog/migrations
+
+# Generate a new migration after changing models
+.\\catalog\\venv\\Scripts\\python.exe -m flask --app catalog.app:create_app db migrate -d catalog/migrations -m "describe the change"
+
+# Downgrade one revision
+.\\catalog\\venv\\Scripts\\python.exe -m flask --app catalog.app:create_app db downgrade -1 -d catalog/migrations
+
+# Show current revision
+.\\catalog\\venv\\Scripts\\python.exe -m flask --app catalog.app:create_app db current -d catalog/migrations
+
+# Show full migration history
+.\\catalog\\venv\\Scripts\\python.exe -m flask --app catalog.app:create_app db history -d catalog/migrations
+```
+
+> **Note:** The `env.py` in `migrations/` is configured with `include_schemas=True` and `include_name` filtering to track only the `catalogos` schema, avoiding cross-schema false positives from `iam` or `booking`.
+
+---
+
 ## Development
 
 1. **Create a virtual environment** (already used in the repo):

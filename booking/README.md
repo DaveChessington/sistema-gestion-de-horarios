@@ -248,6 +248,36 @@ Open `booking/pruebas_manuales.http` in VS Code with the **REST Client** extensi
 
 ---
 
+## Database Migrations (Flask-Migrate / Alembic)
+
+This service uses **Flask-Migrate** (`Flask-Migrate==4.1.0`, `alembic==1.19.1`) to version-control all schema changes in the `reservas` PostgreSQL schema.  
+Migrations live in `booking/migrations/versions/` and are applied automatically by `entrypoint.sh` on each container start.
+
+### Migration commands (run from the project root)
+
+```powershell
+# Apply pending migrations (run on every deploy / container start)
+$env:PYTHONPATH = "."
+.\\booking\\venv\\Scripts\\python.exe -m flask --app booking.app:create_app db upgrade -d booking/migrations
+
+# Generate a new migration after changing models
+.\\booking\\venv\\Scripts\\python.exe -m flask --app booking.app:create_app db migrate -d booking/migrations -m "describe the change"
+
+# Downgrade one revision
+.\\booking\\venv\\Scripts\\python.exe -m flask --app booking.app:create_app db downgrade -1 -d booking/migrations
+
+# Show current revision
+.\\booking\\venv\\Scripts\\python.exe -m flask --app booking.app:create_app db current -d booking/migrations
+
+# Show full migration history
+.\\booking\\venv\\Scripts\\python.exe -m flask --app booking.app:create_app db history -d booking/migrations
+```
+
+> **Note:** The `env.py` in `migrations/` is configured with `include_schemas=True` and `include_name` filtering to track only the `reservas` schema.  
+> Default `tipo_evento` seed data is inserted automatically by `db_init.py` on first run — **not** by migrations, so it is safe to run `db upgrade` on an already-populated database.
+
+---
+
 ## Contributing
 
 Please follow the repository's coding standards, maintain docstrings, and update test suites when adding new endpoints or updating models. Submit pull requests against the `development` branch.

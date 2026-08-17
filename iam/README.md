@@ -14,6 +14,37 @@ The **IAM (Identity & Access Management)** microservice provides authentication 
 - **Role‑based access control** (`/admin-solo`) limited to `COORDINADOR` and `ADMIN_PLANTEL` roles.
 - Comprehensive **unit / integration tests** in `tests/`.
 - **Manual HTTP test suite** (`pruebas_manuales.http`) for quick verification with VS Code REST Client or Postman.
+- **Database migrations** managed with **Flask-Migrate** (Alembic) — schema changes are versioned and applied automatically on container startup.
+
+## Database Migrations (Flask-Migrate / Alembic)
+
+This service uses **Flask-Migrate** (`Flask-Migrate==4.1.0`, `alembic==1.19.1`) to version-control all schema changes.  
+Migrations live in `iam/migrations/versions/` and are applied automatically by `entrypoint.sh` on each container start.
+
+### Migration commands (run from the `iam/` directory)
+
+```powershell
+# Activate the virtual environment first
+.\venv\Scripts\activate
+
+# Apply pending migrations (run on every deploy / container start)
+flask --app app:create_app db upgrade
+
+# Generate a new migration after changing models
+flask --app app:create_app db migrate -m "describe the change"
+
+# Downgrade one revision
+flask --app app:create_app db downgrade -1
+
+# Show current revision
+flask --app app:create_app db current
+
+# Show full migration history
+flask --app app:create_app db history
+```
+
+> **Note:** `FLASK_APP` can also be set as an environment variable instead of using `--app`.  
+> The `env.py` in `migrations/` is configured with `include_schemas=True` so Alembic tracks the `public` / `auth` PostgreSQL schemas.
 
 ## Quick Start (Docker)
 
