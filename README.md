@@ -1,20 +1,27 @@
-# Sistema de gestión de horarios UDL
+# Sistema de gestión de horarios UDL (Version 1.0 - MVP)
+
+## Objetivo General del Proyecto
+
+El objetivo general de este proyecto es proporcionar una plataforma centralizada y modular para administrar la asignación de espacios físicos (salones, auditorios, laboratorios) y recursos institucionales (equipos, programas educativos) dentro de la universidad. El sistema busca optimizar la planificación académica y administrativa mediante la resolución y prevención automatizada de conflictos de horarios (colisiones), garantizando la transparencia y eficiencia en el uso de las instalaciones para coordinadores, administradores de plantel, docentes y alumnos.
+
+## Arquitectura
 
 MVP modular con Flask, Jinja2 y PostgreSQL:
 
 - `iam`: autenticación, JWT, roles y usuarios.
 - `catalog`: planteles, salones, equipos y programas.
 - `booking`: peticiones, reservas confirmadas, colisiones y horarios.
-- `schedule`: vistas públicas y administrativas.
+- `schedule`: vistas públicas y administrativas (Frontend).
 
 ## Ejecución
 
-```powershell
-docker compose up -d --build postgres_db iam catalog booking
-.venv\Scripts\python.exe schedule\run.py
+El proyecto está completamente dockerizado. Para construir y levantar todos los microservicios junto con la base de datos, ejecuta:
+
+```bash
+docker compose up -d --build
 ```
 
-El frontend se abre en `http://127.0.0.1:5004/login`.
+El frontend estará disponible en `http://localhost:5004/login`.
 
 ## Datos reproducibles de prueba
 
