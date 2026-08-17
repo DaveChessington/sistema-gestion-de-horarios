@@ -66,6 +66,12 @@ def test_get_nonexistent_entities(db_session, app):
             ProgramService.get_program_by_id(999999)
 
 
+@pytest.mark.skip(
+    reason=(
+        "Las rutas /api/v1/planteles pertenecen al microservicio 'catalog', no a 'iam'. "
+        "Este test debe ejecutarse contra la app del módulo catalog con su propio cliente."
+    )
+)
 def test_public_get_endpoints_no_auth(db_session, app, client):
     with app.app_context():
         plantel = CampusService.create_plantel('Plantel Público')

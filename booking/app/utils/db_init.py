@@ -50,4 +50,4 @@ def init_db(app, db):
         
         db.create_all()
         seed_tipos_evento(db)
-        print("✓ Esquema 'reservas' y tablas del módulo Booking inicializados correctamente.")
+        print("[OK] Esquema 'reservas' y tablas del módulo Booking inicializados correctamente.")

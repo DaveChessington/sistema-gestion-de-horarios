@@ -1,14 +1,15 @@
 from flask import Flask
 from catalog.config import Config
-from catalog.app.extensions import db
+from catalog.app.extensions import db, migrate
 from catalog.app.utils.db_init import init_db
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Inicializar base de datos
+    # Inicializar base de datos y migraciones
     db.init_app(app)
+    migrate.init_app(app, db)
 
     # Registrar Blueprints
     from catalog.app.routes.catalog_routes import catalog_bp

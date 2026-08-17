@@ -40,4 +40,4 @@ def init_db(app, db):
             # Crear el esquema si no existe en PostgreSQL
             create_schemas(db)
         db.create_all()
-        print("✓ Esquema 'catalogos' y tablas inicializados correctamente")
+        print("[OK] Esquema 'catalogos' y tablas inicializados correctamente")

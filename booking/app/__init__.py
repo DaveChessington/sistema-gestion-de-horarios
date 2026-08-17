@@ -1,6 +1,6 @@
 from flask import Flask
 from booking.config import Config
-from booking.app.extensions import db
+from booking.app.extensions import db, migrate
 from booking.app.utils.db_init import init_db
 
 
@@ -8,8 +8,9 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Inicializar la extensión de base de datos
+    # Inicializar la extensión de base de datos y migraciones
     db.init_app(app)
+    migrate.init_app(app, db)
 
     # Registrar Blueprints
     from booking.app.routes.booking_routes import booking_bp

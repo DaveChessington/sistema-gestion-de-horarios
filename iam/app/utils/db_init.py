@@ -30,10 +30,13 @@ def init_db(app, db):
         db: Instancia de SQLAlchemy
     """
     with app.app_context():
-        # Crear esquemas primero
-        create_schemas(db)
+        if db.engine.url.drivername == 'sqlite':
+            for table in db.metadata.tables.values():
+                table.schema = None
+        else:
+            create_schemas(db)
         
         # Crear todas las tablas
         db.create_all()
         
-        print("✓ Esquemas y tablas inicializados correctamente")
+        print("[OK] Esquemas y tablas inicializados correctamente")
