@@ -9,7 +9,7 @@ from booking.app import create_app
 app = create_app()
 
 if __name__ == '__main__':
-    port = int(os.environ.get('BOOKING_PORT', 5003))
+    port = 5003 #int(os.environ.get('BOOKING_PORT', 5000))
     host = os.environ.get('HOST', '0.0.0.0')
     debug = os.environ.get('DEBUG', 'True').lower() in ['true', '1', 't']
     app.run(host=host, port=port, debug=debug)

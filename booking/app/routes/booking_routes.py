@@ -22,7 +22,7 @@ def request_booking(current_user_payload):
 
     # Validar que venga fecha o fecha_reserva
     fecha_presente = 'fecha_reserva' in data or 'fecha' in data
-    campos_requeridos = ['id_salon', 'hora_inicio', 'hora_fin', 'id_tipo_evento']
+    campos_requeridos = ['hora_inicio', 'hora_fin', 'id_tipo_evento']
     faltantes = [campo for campo in campos_requeridos if campo not in data or data[campo] is None]
     
     if not fecha_presente:

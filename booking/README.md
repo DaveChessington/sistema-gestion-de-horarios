@@ -84,8 +84,11 @@ All routes are mounted under `/api/v1`.
 ## Endpoint Details & Purpose
 
 ### 1. `POST /api/v1/booking/request`
-- **Purpose**: Submits a new booking request. Performs real-time room validation against Catalog Service (`GET /api/v1/salones/<id_salon>`), verifies capacity against `numero_alumnos`, applies pessimistic locking (`SELECT FOR UPDATE`), evaluates priority $P = U + E$, and atomically registers or displaces bookings.
-- **Request Body**:
+- **Purpose**: Submits a new booking request. 
+  - If `id_salon` is provided: Performs real-time room validation against Catalog Service (`GET /api/v1/salones/<id_salon>`) and verifies capacity against `numero_alumnos`.
+  - If `id_salon` is omitted: Performs automatic room selection querying Catalog Service (`GET /api/v1/salones`), finding an active room with `capacidad >= numero_alumnos` and matching software criteria.
+  - Applies pessimistic locking (`SELECT FOR UPDATE`), evaluates priority $P = U + E$, and atomically registers or displaces bookings.
+- **Request Body (Explicit `id_salon`)**:
 ```json
 {
   "id_salon": 101,
@@ -99,9 +102,22 @@ All routes are mounted under `/api/v1`.
   "observaciones": "Requiere proyector y red empresarial"
 }
 ```
+- **Request Body (Automatic Room Assignment, omitting `id_salon`)**:
+```json
+{
+  "id_programa": 1,
+  "materia_nombre": "Inteligencia Artificial",
+  "fecha_reserva": "2026-09-15",
+  "hora_inicio": "10:00",
+  "hora_fin": "12:00",
+  "id_tipo_evento": 1,
+  "numero_alumnos": 30,
+  "observaciones": "Auto-asignación de salón por capacidad"
+}
+```
 - **Responses**:
-  - `201 Created`: Request approved directly or approved by displacing lower-priority bookings.
-  - `400 Bad Request`: Missing mandatory fields, invalid hours (`hora_inicio >= hora_fin`), capacity exceeded, or invalid room.
+  - `201 Created`: Request approved directly or approved by displacing lower-priority bookings. Returns assigned `id_salon`.
+  - `400 Bad Request`: Missing mandatory fields, invalid hours (`hora_inicio >= hora_fin`), capacity exceeded (`capacidad < numero_alumnos`), or no suitable room found.
   - `409 Conflict`: Request rejected because of an existing booking with equal or higher priority (FIFO rule).
   - `503 Service Unavailable`: Cannot connect to Catalog microservice.
 

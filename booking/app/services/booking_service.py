@@ -59,33 +59,7 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
     6. Commit atómico.
     """
     try:
-        # Extraer y validar campos obligatorios (aceptar fecha_reserva o fecha)
-        id_salon = int(data['id_salon'])
-        
-        # Validar existencia de salón comunicándose con el Catalog Service
-        catalog_url = current_app.config.get('CATALOG_SERVICE_URL', 'http://127.0.0.1:5002')
-        try:
-            # Aunque no requerimos token para el GET público según las rutas actuales, es buena práctica enviarlo
-            # si en el futuro se protege.
-            response = requests.get(f"{catalog_url}/api/v1/salones/{id_salon}", timeout=5)
-            if response.status_code == 404:
-                return {'error': f'El salón con ID {id_salon} no existe o no está activo.'}, 400
-            elif response.status_code != 200:
-                return {'error': f'Error al validar el salón. Servicio de catálogo respondió con: {response.status_code}'}, 500
-            
-            salon_data = response.json()
-            numero_alumnos = data.get('numero_alumnos')
-            if numero_alumnos is not None:
-                numero_alumnos = int(numero_alumnos)
-                if salon_data.get('capacidad', 0) < numero_alumnos:
-                    return {'error': f'La capacidad del salón ({salon_data.get("capacidad", 0)}) es menor a los alumnos esperados ({numero_alumnos})'}, 400
-                    
-        except requests.exceptions.RequestException as req_e:
-             return {'error': f'No se pudo comunicar con el servicio de catálogo para validar el salón: {str(req_e)}'}, 503
-             
-        # También aseguramos que la variable exista si entra por el except o no entra en el bloque
-        numero_alumnos = int(data.get('numero_alumnos')) if data.get('numero_alumnos') is not None else None
-
+        # 1. Extraer y validar fecha y horas
         fecha_val = data.get('fecha_reserva') or data.get('fecha')
         if not fecha_val:
             return {'error': 'El campo fecha_reserva (o fecha) es requerido'}, 400
@@ -93,22 +67,95 @@ def create_booking_request(data: dict, current_user: dict) -> tuple[dict, int]:
         fecha_obj = parse_date(fecha_val)
         hora_inicio_obj = parse_time(data['hora_inicio'])
         hora_fin_obj = parse_time(data['hora_fin'])
-        id_tipo_evento = int(data['id_tipo_evento'])
         
-        id_programa = int(data['id_programa']) if data.get('id_programa') is not None else None
-        materia_nombre = data.get('materia_nombre')
-        observaciones = data.get('observaciones', '')
-        
-        # Validar consistencia de horas
         if hora_inicio_obj >= hora_fin_obj:
             return {'error': 'La hora de inicio debe ser estrictamente menor que la hora de fin'}, 400
 
+        id_tipo_evento = int(data['id_tipo_evento'])
+        id_programa = int(data['id_programa']) if data.get('id_programa') is not None else None
+        materia_nombre = data.get('materia_nombre')
+        observaciones = data.get('observaciones', '')
+        numero_alumnos = int(data.get('numero_alumnos')) if data.get('numero_alumnos') is not None else None
+
         user_role = current_user.get('rol', 'ALUMNO')
         id_usuario = current_user.get('id_usuario')
-        id_responsable = id_usuario  # Registra al usuario autenticado por JWT como auditor/responsable
+        id_responsable = id_usuario
 
-        # 1. Calcular Prioridad P = U + E
+        # 2. Calcular Prioridad P = U + E
         prioridad_nueva, u_peso, e_peso = calculate_priority(user_role, id_tipo_evento)
+
+        # 3. Determinar o auto-asignar el id_salon
+        catalog_url = current_app.config.get('CATALOG_SERVICE_URL', 'http://127.0.0.1:5002')
+        id_salon = data.get('id_salon')
+
+        if id_salon is not None:
+            id_salon = int(id_salon)
+            try:
+                response = requests.get(f"{catalog_url}/api/v1/salones/{id_salon}", timeout=5)
+                if response.status_code == 404:
+                    return {'error': f'El salón con ID {id_salon} no existe o no está activo.'}, 400
+                elif response.status_code != 200:
+                    return {'error': f'Error al validar el salón. Servicio de catálogo respondió con: {response.status_code}'}, 500
+                
+                salon_data = response.json()
+                if numero_alumnos is not None and salon_data.get('capacidad', 0) < numero_alumnos:
+                    return {'error': f'La capacidad del salón ({salon_data.get("capacidad", 0)}) es menor a los alumnos esperados ({numero_alumnos})'}, 400
+            except requests.exceptions.RequestException as req_e:
+                return {'error': f'No se pudo comunicar con el servicio de catálogo para validar el salón: {str(req_e)}'}, 503
+        else:
+            # Auto-asignación de salón basado en capacidad y disponibilidad
+            params = {}
+            if data.get('id_plantel'):
+                params['id_plantel'] = data.get('id_plantel')
+            if data.get('software_id'):
+                params['software_id'] = data.get('software_id')
+
+            try:
+                response = requests.get(f"{catalog_url}/api/v1/salones", params=params, timeout=5)
+                if response.status_code != 200:
+                    return {'error': f'Error al consultar el catálogo de salones. Servicio de catálogo respondió con: {response.status_code}'}, 500
+                
+                salones_resp = response.json()
+                salones_disponibles = salones_resp if isinstance(salones_resp, list) else [salones_resp]
+                
+                if not salones_disponibles:
+                    return {'error': 'No hay salones disponibles en el catálogo que cumplan los criterios.'}, 400
+                
+                if numero_alumnos is not None:
+                    salones_aptos = [s for s in salones_disponibles if s.get('capacidad', 0) >= numero_alumnos]
+                    if not salones_aptos:
+                        return {'error': f'No hay salones con capacidad suficiente para los {numero_alumnos} alumnos esperados.'}, 400
+                else:
+                    salones_aptos = salones_disponibles
+
+                # Ordenar por capacidad ascendente para elegir el salón más adecuado
+                salones_aptos.sort(key=lambda s: s.get('capacidad', 0))
+
+                # Buscar entre los salones aptos uno que esté completamente libre en el horario solicitado
+                salon_elegido = None
+                salon_desplazable = None
+
+                for s in salones_aptos:
+                    sid = s['id_salon']
+                    traslapes = Peticion.query.filter(
+                        Peticion.id_salon == sid,
+                        Peticion.fecha == fecha_obj,
+                        Peticion.estado.in_(['APROBADA', 'APARTADA', 'PENDIENTE']),
+                        Peticion.hora_inicio < hora_fin_obj,
+                        Peticion.hora_fin > hora_inicio_obj
+                    ).all()
+
+                    if not traslapes:
+                        salon_elegido = sid
+                        break
+                    else:
+                        max_p = max(p.prioridad_calculada for p in traslapes)
+                        if prioridad_nueva > max_p and salon_desplazable is None:
+                            salon_desplazable = sid
+
+                id_salon = salon_elegido or salon_desplazable or salones_aptos[0]['id_salon']
+            except requests.exceptions.RequestException as req_e:
+                return {'error': f'No se pudo comunicar con el servicio de catálogo para auto-asignar el salón: {str(req_e)}'}, 503
 
         # 2. Bloqueo de fila atómico (SELECT FOR UPDATE) y consulta de traslapes en el mismo salón y fecha
         query = Peticion.query.filter(
