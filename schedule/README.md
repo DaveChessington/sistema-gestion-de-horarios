@@ -33,6 +33,18 @@ el resumen administrativo conserva datos de muestra.
 
 ## Ejecución local
 
+### Con Docker (Recomendado)
+
+Desde la raíz del repositorio, puedes construir y levantar el contenedor del frontend junto con el resto de los microservicios usando Docker Compose:
+
+```bash
+docker compose up -d --build schedule
+```
+
+El frontend quedará disponible en `http://localhost:5004` y se comunicará automáticamente con los contenedores de `iam`, `catalog` y `booking` a través de la red interna de Docker.
+
+### Sin Docker (Script local)
+
 Desde la raíz del repositorio:
 
 ```powershell

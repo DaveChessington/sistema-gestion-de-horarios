@@ -97,6 +97,30 @@ services:
     networks:
       - backend_net
 
+  schedule:
+    build:
+      context: ./schedule
+      dockerfile: Dockerfile
+    container_name: schedule
+    restart: always
+    ports:
+      - "${SCHEDULE_PORT:-5004}:5004"
+    env_file:
+      - .env
+    environment:
+      SCHEDULE_HOST: 0.0.0.0
+      SCHEDULE_PORT: 5004
+      IAM_API_BASE_URL: http://iam:5000/api/v1/auth
+      CATALOG_API_BASE_URL: http://catalog:5002/api/v1
+      BOOKING_API_BASE_URL: http://booking:5003/api/v1
+      SCHEDULE_SECRET_KEY: ${SECRET_KEY:-super-secret-key-udl}
+    depends_on:
+      - iam
+      - catalog
+      - booking
+    networks:
+      - backend_net
+
 volumes:
   postgres_data:
 
