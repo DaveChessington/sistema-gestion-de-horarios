@@ -10,7 +10,7 @@ def test_register_user_with_valid_plantel(db_session, app):
                 'nombre': 'Admin',
                 'apellido': 'Plantel',
                 'correo': 'adminplantel@udl.edu.mx',
-                'password': 'password123',
+                'password': 'Password123!',
                 'rol': 'ADMIN_PLANTEL',
                 'id_plantel_asignado': 1
             })
@@ -27,7 +27,7 @@ def test_register_user_with_invalid_plantel(db_session, app):
                 'nombre': 'User',
                 'apellido': 'Invalido',
                 'correo': 'usuario_invalidoplantel@udl.edu.mx',
-                'password': 'password123',
+                'password': 'Password123!',
                 'rol': 'DOCENTE',
                 'id_plantel_asignado': 9999
             })
@@ -44,18 +44,18 @@ def test_users_endpoint_returns_list_for_admin(db_session, app, client):
                 'nombre': 'Admin',
                 'apellido': 'Sistema',
                 'correo': 'admin@udl.edu.mx',
-                'password': 'password123',
+                'password': 'Password123!',
                 'rol': 'COORDINADOR'
             })
             AuthService.register_user({
                 'nombre': 'Docente',
                 'apellido': 'Prueba',
                 'correo': 'docente@udl.edu.mx',
-                'password': 'password123',
+                'password': 'Password123!',
                 'rol': 'DOCENTE'
             })
 
-        login_result = AuthService.login('admin@udl.edu.mx', 'password123')
+        login_result = AuthService.login('admin@udl.edu.mx', 'Password123!')
         token = login_result['token']
 
         response = client.get(

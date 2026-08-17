@@ -1,0 +1,78 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Equipos de {{ programa.nombre }} • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<section class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-600">Asociaciones de software</p>
+    <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{{ programa.nombre }}</h2>
+    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Vincula el programa con equipos activos disponibles para el alcance de tu sesión.</p>
+  </div>
+  <a href="{{ url_for('admin.programa_edit', id_programa=programa.id_programa) }}" class="button-secondary justify-center"><i class="fa-regular fa-pen-to-square"></i>Editar programa</a>
+</section>
+
+{% for message in get_flashed_messages(category_filter=['success']) %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status"><i class="fa-solid fa-circle-check mt-0.5"></i><p>{{ message }}</p></div>
+{% endfor %}
+{% for message in get_flashed_messages(category_filter=['error']) %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><p>{{ message }}</p></div>
+{% endfor %}
+
+{% if catalog_error %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible consultar los equipos.</p><p class="mt-1">{{ catalog_error }}</p></div></div>
+{% endif %}
+
+{% set associated_count = equipos|selectattr('associated')|list|length %}
+<section class="mt-6 grid gap-4 sm:grid-cols-3">
+  <article class="admin-stat-card"><p class="admin-stat-label">Equipos disponibles</p><div class="mt-3 flex items-end justify-between"><p class="admin-stat-value">{{ equipos|length }}</p><span class="admin-stat-icon bg-violet-50 text-violet-600"><i class="fa-solid fa-computer"></i></span></div></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Vinculados</p><div class="mt-3 flex items-end justify-between"><p class="admin-stat-value">{{ associated_count }}</p><span class="admin-stat-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-link"></i></span></div></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Sin vincular</p><div class="mt-3 flex items-end justify-between"><p class="admin-stat-value">{{ equipos|length - associated_count }}</p><span class="admin-stat-icon bg-slate-100 text-slate-500"><i class="fa-solid fa-link-slash"></i></span></div></article>
+</section>
+
+<section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:p-5 md:flex-row md:items-center md:justify-between">
+    <div class="relative w-full md:max-w-md">
+      <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+      <input id="programEquipmentSearch" type="search" aria-label="Buscar equipo" placeholder="Buscar por equipo, salón o plantel" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none placeholder:text-slate-400">
+    </div>
+    <button id="programEquipmentFilter" type="button" class="filter-button"><i class="fa-solid fa-filter text-slate-400"></i><span data-filter-label>Asociación: todas</span><i class="fa-solid fa-chevron-down text-[10px]"></i></button>
+  </div>
+
+  <div id="programEquipmentGrid" class="grid gap-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+    {% for equipo in equipos %}
+      <article class="resource-card" data-program-equipment-card data-associated="{{ 'true' if equipo.associated else 'false' }}" data-search="{{ equipo.numero }} {{ equipo.descripcion or '' }} {{ equipo.salon_nombre }} {{ equipo.plantel_nombre }}">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-3">
+            <span class="resource-icon {{ 'bg-emerald-50 text-emerald-600' if equipo.associated else 'bg-violet-50 text-violet-600' }}"><i class="fa-solid {{ 'fa-link' if equipo.associated else 'fa-computer' }}"></i></span>
+            <div class="min-w-0"><h3 class="truncate font-semibold">{{ equipo.numero }}</h3><p class="mt-1 truncate text-xs text-slate-400">{{ equipo.descripcion or 'Sin descripción' }}</p></div>
+          </div>
+          <span class="status-badge {{ 'status-active' if equipo.associated else 'bg-slate-100 text-slate-500' }}"><span></span>{{ 'Vinculado' if equipo.associated else 'Disponible' }}</span>
+        </div>
+        <div class="mt-5 rounded-2xl bg-slate-50 p-4">
+          <p class="resource-label">Ubicación</p>
+          <p class="mt-2 text-sm font-semibold text-slate-700">{{ equipo.salon_nombre }}</p>
+          <p class="mt-1 text-xs text-slate-400">{{ equipo.plantel_nombre }}</p>
+        </div>
+        {% if equipo.associated %}
+          <form method="post" action="{{ url_for('admin.programa_equipo_remove', id_programa=programa.id_programa, id_equipo=equipo.id_equipo) }}" data-program-equipment-remove data-equipment-label="{{ equipo.numero }}" class="mt-4">
+            <button type="submit" class="button-secondary w-full justify-center text-red-600"><i class="fa-solid fa-link-slash"></i>Desvincular</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('admin.programa_equipo_assign', id_programa=programa.id_programa, id_equipo=equipo.id_equipo) }}" class="mt-4">
+            <button type="submit" class="button-primary w-full justify-center"><i class="fa-solid fa-link"></i>Vincular programa</button>
+          </form>
+        {% endif %}
+      </article>
+    {% endfor %}
+    <p id="programEquipmentEmpty" class="{{ '' if not equipos else 'hidden ' }}col-span-full py-12 text-center text-sm text-slate-400">No hay equipos disponibles para los filtros y el alcance actual.</p>
+  </div>
+  <div class="border-t border-slate-100 px-5 py-4"><p id="programEquipmentResultCount" class="text-xs text-slate-500">Mostrando {{ equipos|length }} equipos</p></div>
+</section>
+
+<p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-shield-halved mt-0.5"></i>Catalog vuelve a validar el JWT y el plantel del equipo antes de aplicar cada asociación.</p>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/programa-equipos.js') }}"></script>
+{% endblock %}

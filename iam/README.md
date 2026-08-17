@@ -6,7 +6,9 @@ The **IAM (Identity & Access Management)** microservice provides authentication 
 
 ## Features
 
-- **User registration** (`/register`) with secure password storage (`bcrypt`).
+- **Administrative user registration** (`/register`) with bcrypt cost 12, strong password policy and role-based access control.
+- Successful login migrates legacy Werkzeug hashes to bcrypt without invalidating existing credentials.
+- **Scoped user administration** with listing, editing and logical deactivation.
 - **Login** (`/login`) that returns a signed JWT.
 - **Protected endpoints** using JWT (`/me`).
 - **Role‑based access control** (`/admin-solo`) limited to `COORDINADOR` and `ADMIN_PLANTEL` roles.
@@ -16,14 +18,19 @@ The **IAM (Identity & Access Management)** microservice provides authentication 
 ## Quick Start (Docker)
 
 ```bash
-# Build the image
-docker build -t iam-service -f iam/Dockerfile .
-
-# Run the container (exposes port 5000)
-docker run -d -p 5000:5000 --name iam-service iam-service
+# Build and start only IAM through Compose
+docker compose up --build -d --no-deps iam
 ```
 
-The service will be reachable at `http://localhost:5000/api/v1/auth`.
+IAM listens on port `5000` inside its container. Compose exposes it on the host
+at `http://localhost:5001/api/v1/auth` by default.
+
+For a local virtual environment, install the base and security dependencies:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r iam\requirements.txt
+.venv\Scripts\python.exe -m pip install -r iam\requirements-security.txt
+```
 
 ## Environment Variables (`.env`)
 
@@ -43,26 +50,42 @@ Create a `.env` file in the `iam/` directory with the values you need before run
 
 | Method | Endpoint | Description | Protected? |
 |--------|----------|-------------|-----------|
-| `POST` | `/api/v1/auth/register` | Register a new user (requires `nombre`, `apellido`, `correo`, `password`, `rol`). | No |
+| `POST` | `/api/v1/auth/register` | Register a new user (requires `nombre`, `apellido`, `correo`, `password`, `rol`). | Yes (`COORDINADOR` or `ADMIN_PLANTEL`) |
 | `POST` | `/api/v1/auth/login`    | Authenticate and receive a JWT. | No |
+| `GET`  | `/api/v1/auth/users` | List users visible to the administrative account. | Yes (`COORDINADOR` or `ADMIN_PLANTEL`) |
+| `GET`  | `/api/v1/auth/users/<id>` | Return one manageable user. | Yes (`COORDINADOR` or `ADMIN_PLANTEL`) |
+| `PUT`  | `/api/v1/auth/users/<id>` | Update profile, role, plantel and optionally password. | Yes (`COORDINADOR` or `ADMIN_PLANTEL`) |
+| `DELETE` | `/api/v1/auth/users/<id>` | Logically deactivate the account. | Yes (`COORDINADOR` or `ADMIN_PLANTEL`) |
 | `GET`  | `/api/v1/auth/me`       | Return the payload of the supplied JWT. | Yes (`Bearer <token>`) |
 | `GET`  | `/api/v1/auth/admin-solo` | Example admin‑only route (requires role `COORDINADOR` or `ADMIN_PLANTEL`). | Yes (`Bearer <token>`) |
+
+`COORDINADOR` has global scope. `ADMIN_PLANTEL` can only list and manage users
+assigned to its own plantel, cannot assign the `COORDINADOR` role and cannot
+deactivate its own account. Deactivation preserves the record and prevents login.
 
 ### Example Request (cURL)
 
 ```bash
-# Register
-curl -X POST http://localhost:5000/api/v1/auth/register \
-     -H "Content-Type: application/json" \
-     -d '{"nombre":"Admin","apellido":"Sistema","correo":"admin@udl.edu.mx","password":"password123","rol":"COORDINADOR"}'
-
 # Login
-TOKEN=$(curl -s -X POST http://localhost:5000/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:5001/api/v1/auth/login \
      -H "Content-Type: application/json" \
-     -d '{"correo":"admin@udl.edu.mx","password":"password123"}' | jq -r .token)
+     -d '{"correo":"admin@udl.edu.mx","password":"Password-Segura123!"}' | jq -r .token)
+
+# Register (requires an administrative token)
+curl -X POST http://localhost:5001/api/v1/auth/register \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"nombre":"Docente","apellido":"Nuevo","correo":"docente@udl.edu.mx","password":"Password-Segura123!","rol":"DOCENTE"}'
 
 # Protected route
-curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/v1/auth/me
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5001/api/v1/auth/me
+```
+
+If the database has no administrative user yet, create the initial one through
+the IAM CLI before using `/register`:
+
+```bash
+docker compose exec iam flask --app run:app create-admin --correo admin@udl.edu.mx
 ```
 
 ## Running Tests
@@ -70,8 +93,8 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/v1/auth/me
 ### Automated tests
 
 ```bash
-# From the project root
-pytest iam/tests/
+# From the iam directory
+pytest tests/
 ```
 
 ### Manual tests

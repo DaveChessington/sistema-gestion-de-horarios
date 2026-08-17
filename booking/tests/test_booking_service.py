@@ -1,7 +1,58 @@
+from datetime import date, datetime, time
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch
+import requests
+
 from booking.tests.conftest import make_token
+from booking.app.models.evento import Evento
 from booking.app.models.peticion import Peticion
+
+
+def persist_request(db_session, room_id, user_id, state='APROBADA'):
+    request_record = Peticion(
+        fecha_solicitud=datetime(2026, 8, 16, 10, 0),
+        fecha=date(2026, 10, 20),
+        hora_inicio=time(8, 0),
+        hora_fin=time(8, 50),
+        estado=state,
+        id_usuario=user_id,
+        id_responsable=user_id,
+        id_salon=room_id,
+        id_tipo_evento=1,
+        prioridad_calculada=80,
+    )
+    db_session.session.add(request_record)
+    db_session.session.commit()
+    return request_record
+
+
+def catalog_response(records, status_code=200):
+    response = MagicMock()
+    response.status_code = status_code
+    response.json.return_value = records
+    return response
+
+
+def persist_confirmed_request(db_session, room_id, user_id, state='APROBADA', active=True):
+    request_record = persist_request(db_session, room_id, user_id, state)
+    event = Evento(
+        nombre='Reserva confirmada',
+        fecha=request_record.fecha,
+        hora_inicio=request_record.hora_inicio,
+        hora_fin=request_record.hora_fin,
+        id_salon=room_id,
+        id_tipo_evento=1,
+        id_usuario=user_id,
+        id_peticion=request_record.id_peticion,
+        prioridad=request_record.prioridad_calculada,
+        activo=active,
+    )
+    db_session.session.add(event)
+    db_session.session.flush()
+    request_record.id_evento = event.id_evento
+    db_session.session.commit()
+    return request_record, event
 
 
 @patch('booking.app.services.booking_service.requests.get')
@@ -151,6 +202,8 @@ def test_booking_delete_cancel_request(mock_get, client, db_session):
     mock_get.return_value.status_code = 200
     mock_get.return_value.json.return_value = {'id_salon': 4, 'capacidad': 100}
     """Prueba la cancelación de una reserva existente vía DELETE."""
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {'id_salon': 4, 'capacidad': 100}
     token_docente = make_token(id_usuario=10, rol='DOCENTE')
     headers = {'Authorization': f'Bearer {token_docente}'}
 
@@ -247,7 +300,7 @@ def test_schedule_grid_query(mock_get, client, db_session):
     token_docente = make_token(id_usuario=10, rol='DOCENTE')
     headers = {'Authorization': f'Bearer {token_docente}'}
 
-    client.post('/api/v1/booking/request', json={
+    res_create = client.post('/api/v1/booking/request', json={
         'id_salon': 101,
         'fecha_reserva': '2026-10-15',
         'hora_inicio': '08:00',
@@ -255,6 +308,7 @@ def test_schedule_grid_query(mock_get, client, db_session):
         'id_tipo_evento': 1,
         'materia_nombre': 'Redes'
     }, headers=headers)
+    assert res_create.status_code == 201
 
     res_grid = client.get('/api/v1/schedule/grid?fecha_reserva=2026-10-15&id_salon=101')
     assert res_grid.status_code == 200

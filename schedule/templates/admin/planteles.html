@@ -1,0 +1,78 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Planteles • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+  <section class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Catálogo institucional</p>
+      <h2 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Planteles</h2>
+      <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Consulta y organiza las sedes que conforman la institución.</p>
+    </div>
+    {% if can_create_plantel %}<a href="{{ url_for('admin.plantel_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200">
+      <i class="fa-solid fa-plus"></i>
+      Nuevo plantel
+    </a>{% endif %}
+  </section>
+
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    {% if category in ['success', 'error'] %}<div class="mt-6 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm {% if category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-red-200 bg-red-50 text-red-800{% endif %}" role="status">
+      <i class="fa-solid {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} mt-0.5"></i>
+      <p>{{ message }}</p>
+    </div>{% endif %}
+  {% endfor %}
+
+  {% if catalog_error %}
+    <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+      <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+      <div><p class="font-semibold">No fue posible consultar los planteles.</p><p class="mt-1">{{ catalog_error }}</p></div>
+    </div>
+  {% endif %}
+
+  <section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-100 p-4 sm:p-5">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="relative w-full md:max-w-md">
+          <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+          <input id="plantelSearch" type="search" aria-label="Buscar plantel" placeholder="Buscar por nombre o dirección" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-700 outline-none placeholder:text-slate-400" />
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="plantelStatusFilter" type="button" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-600 md:flex-none">
+            <i class="fa-solid fa-filter text-slate-400"></i>
+            <span data-filter-label>Estado: todos</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+          </button>
+          <button id="plantelReset" type="button" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500" aria-label="Restablecer listado"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden overflow-x-auto md:block">
+      <table class="w-full min-w-[760px] text-left">
+        <thead class="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+          <tr><th class="px-6 py-4">Plantel</th><th class="px-6 py-4">Dirección</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Acciones</th></tr>
+        </thead>
+        <tbody id="plantelTableBody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+
+    <div id="plantelMobileList" class="divide-y divide-slate-100 md:hidden"></div>
+
+    <div class="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p id="plantelResultCount" class="text-xs text-slate-500">Preparando listado de planteles...</p>
+      <nav class="flex items-center gap-1" aria-label="Paginación de planteles">
+        <button id="plantelPreviousPage" type="button" class="pagination-button" aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></button>
+        <button id="plantelCurrentPage" type="button" aria-current="page" class="pagination-button pagination-button-active">1</button>
+        <button id="plantelNextPage" type="button" class="pagination-button" aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+      </nav>
+    </div>
+  </section>
+
+  <p class="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>La edición y desactivación se procesan mediante Catalog. Desactivar un plantel también desactiva lógicamente sus salones y equipos asociados.</p>
+  <script id="plantelData" type="application/json">{{ planteles|tojson }}</script>
+  <script id="plantelActionData" type="application/json">{{ plantel_action_context|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/planteles.js') }}"></script>
+{% endblock %}

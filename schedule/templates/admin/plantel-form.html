@@ -1,0 +1,72 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}{{ 'Editar' if is_edit else 'Nuevo' }} plantel • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+  <div>
+    <p class="section-eyebrow">Catálogo institucional</p>
+    <h2 class="section-title">{{ 'Editar plantel' if is_edit else 'Nuevo plantel' }}</h2>
+    <p class="section-description">{{ 'Actualiza la información institucional de la sede.' if is_edit else 'Captura visual de una sede universitaria.' }}</p>
+  </div>
+
+  {% if form_error %}
+    <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+      <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+      <div><p class="font-semibold">No fue posible {{ 'actualizar' if is_edit else 'registrar' }} el plantel.</p><p class="mt-1">{{ form_error }}</p></div>
+    </div>
+  {% endif %}
+
+  <form id="plantelForm" method="post" action="{{ form_action }}" data-submit-progress="{{ 'Guardando...' if is_edit else 'Registrando...' }}" class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" novalidate>
+    <div class="space-y-6">
+      <section class="form-section">
+        <div class="form-section-heading">
+          <span class="form-section-number">1</span>
+          <div><h3>Información general</h3><p>Datos principales que identificarán al plantel.</p></div>
+        </div>
+        <div class="mt-6 grid gap-5">
+          <label class="form-field">
+            <span>Nombre del plantel <strong>*</strong></span>
+            <div class="form-input-icon"><i class="fa-solid fa-building-columns"></i><input id="plantelName" name="nombre" type="text" value="{{ form_values.nombre }}" placeholder="Ej. Plantel León" required /></div>
+            <small id="plantelNameError" class="hidden text-red-600">El nombre es obligatorio.</small>
+          </label>
+          <label class="form-field">
+            <span>Dirección</span>
+            <div class="form-input-icon"><i class="fa-solid fa-location-dot"></i><input id="plantelAddress" name="direccion" type="text" value="{{ form_values.direccion }}" placeholder="Calle, número, colonia y ciudad" /></div>
+            <small>Campo opcional conforme al modelo actual.</small>
+          </label>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <div class="flex items-start justify-between gap-4">
+          <div><h3 class="text-sm font-semibold">Estado del plantel</h3><p class="mt-1 text-xs text-slate-500">{{ 'La edición conserva el registro activo.' if is_edit else 'El registro se representa inicialmente como activo.' }}</p></div>
+          <span class="visual-toggle"><span></span></span>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <a href="{{ url_for('admin.planteles') }}" class="button-secondary">Cancelar</a>
+        <button type="submit" class="button-primary"><i class="fa-solid fa-building-circle-check"></i>{{ 'Guardar cambios' if is_edit else 'Registrar plantel' }}</button>
+      </div>
+    </div>
+
+    <aside class="space-y-5 xl:sticky xl:top-28 xl:self-start">
+      <section class="form-preview-card">
+        <p>Vista previa</p>
+        <span class="preview-large-icon"><i class="fa-solid fa-building-columns"></i></span>
+        <h3 id="plantelPreviewName">Nombre pendiente</h3>
+        <small id="plantelPreviewAddress">Dirección pendiente</small>
+        <div><span>Estado</span><strong>Activo</strong></div>
+      </section>
+      <section class="form-note">
+        <span class="interface-state-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-circle-info"></i></span>
+        <h3>Entidad principal</h3>
+        <p>{% if is_edit %}Los cambios se enviarán a Catalog. La edición no altera las asociaciones actuales con salones y equipos.{% else %}El registro se enviará al servicio Catalog. Los salones se asociarán posteriormente a un plantel registrado.{% endif %}</p>
+      </section>
+    </aside>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/plantel-form.js') }}"></script>
+{% endblock %}

@@ -9,6 +9,7 @@ Key features:
 - Uses **PostgreSQL** as the primary persistence engine (schema `reservas`).
 - Integrated with **IAM** microservice for stateless JWT authentication (`Bearer <token>`).
 - Intercommunicates with **Catalog** microservice (`CATALOG_SERVICE_URL`) for real-time room existence and capacity verification.
+- Enforces `ADMIN_PLANTEL` tenant scope against Catalog for creation, history, and cancellation operations.
 - **Concurrency control** with pessimistic row locking (`SELECT ... FOR UPDATE`) to eliminate double-booking race conditions.
 - Automated priority calculation ($P = U + E$) and **FIFO displacement logic**.
 
@@ -22,7 +23,7 @@ All models reside in the PostgreSQL schema `reservas` and expose `to_dict()` met
 |-------|----------------|------------|-----------------------------|
 | **TipoEvento** | `reservas.tipo_evento` | `id_tipo_evento`, `nombre`, `peso_evento`, `descripcion` | Preseeded event categories with assigned priority weights ($E$). One-to-many $\rightarrow$ **Peticion**, **Evento**. |
 | **Peticion** | `reservas.peticion` | `id_peticion`, `fecha_solicitud`, `fecha`, `hora_inicio`, `hora_fin`, `estado`, `id_usuario`, `id_responsable`, `id_salon`, `id_programa`, `materia_nombre`, `numero_alumnos`, `id_tipo_evento`, `prioridad_calculada`, `observaciones`, `motivo_rechazo`, `id_evento` | Audit log and lifecycle tracking of reservation requests (`APROBADA`, `PENDIENTE`, `RECHAZADA`, `DESPLAZADA`, `CANCELADA`). |
-| **Evento** | `reservas.evento` | `id_evento`, `nombre`, `descripcion`, `fecha`, `hora_inicio`, `hora_fin`, `id_salon`, `numero_alumnos`, `id_tipo_evento`, `id_usuario`, `id_peticion`, `prioridad`, `activo` | Confirmed occupancy events on the academic calendar. |
+| **Reserva (Evento)** | `reservas.evento` | `id_evento`, `nombre`, `descripcion`, `fecha`, `hora_inicio`, `hora_fin`, `id_salon`, `numero_alumnos`, `id_tipo_evento`, `id_usuario`, `id_peticion`, `prioridad`, `activo` | Confirmed occupancy on the academic calendar. `Evento` is retained as the physical model name for compatibility and exposed as the `Reserva` domain alias. |
 
 ---
 
@@ -52,6 +53,21 @@ When an incoming request overlaps in time (`hora_inicio < fin_nuevo` and `hora_f
 
 ---
 
+## Docker Compose
+
+From the project root, build and start only Booking without recreating its
+running dependencies:
+
+```bash
+docker compose up -d --no-deps --build booking
+```
+
+The service is available at `http://localhost:5003/api/v1` by default.
+Inside the Compose network it connects to PostgreSQL through `postgres_db` and
+to Catalog through `http://catalog:5002`.
+
+---
+
 ## Environment Variables (`.env`)
 
 | Variable | Description | Default |
@@ -64,7 +80,9 @@ When an incoming request overlaps in time (`hora_inicio < fin_nuevo` and `hora_f
 | `DB_HOST` | DB host (used if `DATABASE_URL` is not set). | `127.0.0.1` |
 | `DB_PORT` | DB port (used if `DATABASE_URL` is not set). | `5432` |
 | `DB_NAME` | Database name (used if `DATABASE_URL` is not set). | `gestion_horarios_udl` |
+| `BOOKING_PORT` | Host port exposed by Compose for Booking. | `5003` |
 | `CATALOG_SERVICE_URL` | Base URL of Catalog microservice for room validation. | `http://127.0.0.1:5002` |
+| `CATALOG_REQUEST_TIMEOUT` | Maximum seconds to wait while resolving Plantel scope in Catalog. | `5` |
 
 ---
 
@@ -75,6 +93,8 @@ All routes are mounted under `/api/v1`.
 | Method | Endpoint | Description | Protected? |
 |--------|----------|-------------|-----------|
 | `POST` | `/api/v1/booking/request` | Submit classroom booking request with automatic capacity and priority collision handling. | Yes (`Bearer <token>`) |
+| `GET` | `/api/v1/booking/request/<int:id_peticion>` | Retrieve one request within the authenticated user's scope. | Yes (`Bearer <token>`) |
+| `PATCH` / `PUT` | `/api/v1/booking/request/<int:id_peticion>` | Reprogram a request atomically and reapply capacity, priority and collision rules. | Yes (`Bearer <token>`) |
 | `GET` | `/api/v1/booking/history` | Retrieve booking request history with filters (`estado`, `id_salon`, `fecha`, `id_usuario`). | Yes (`Bearer <token>`) |
 | `DELETE` | `/api/v1/booking/request/<int:id_peticion>` | Cancel a booking request, liberate classroom slot, and deactivate associated event. | Yes (`Bearer <token>`) |
 | `GET` | `/api/v1/schedule/grid` | Query occupancy schedule grid matrix in JSON format. | Public |
@@ -126,7 +146,8 @@ All routes are mounted under `/api/v1`.
 ### 2. `GET /api/v1/booking/history`
 - **Purpose**: Consults booking history. 
   - Regular users (`DOCENTE`, `ALUMNO`) only see their own requests.
-  - Administrative roles (`COORDINADOR`, `ADMIN_PLANTEL`, `ADMINISTRADOR`) can view all requests or filter by specific `id_usuario`.
+  - `COORDINADOR` can view all requests or filter by a specific `id_usuario`.
+  - `ADMIN_PLANTEL` can only view requests for Salones belonging to its assigned Plantel, including inactive historical Salones.
 - **Query Parameters**:
   - `estado`: Filter by request state (`APROBADA`, `PENDIENTE`, `RECHAZADA`, `DESPLAZADA`, `CANCELADA`).
   - `id_salon`: Filter by classroom ID.
@@ -158,18 +179,21 @@ All routes are mounted under `/api/v1`.
 
 ### 3. `DELETE /api/v1/booking/request/<int:id_peticion>`
 - **Purpose**: Cancels an active or pending booking request. Sets `estado = 'CANCELADA'`, sets the associated `Evento.activo = False`, and frees up the classroom slot.
-- **Permissions**: Restricted to the owner (`id_usuario`) of the request or users with administrative roles (`COORDINADOR`, `ADMIN_PLANTEL`, `ADMINISTRADOR`).
+- **Permissions**: Restricted to the owner (`id_usuario`), global `COORDINADOR`, or `ADMIN_PLANTEL` when the reservation belongs to a Salón in its assigned Plantel.
 - **Responses**:
   - `200 OK`: Reservation cancelled and slot freed up.
   - `403 Forbidden`: User does not own the request and lacks admin rights.
   - `404 Not Found`: Request ID not found.
+  - `409 Conflict`: Request is already in a terminal state and cannot be cancelled.
+  - `503 Service Unavailable`: Catalog cannot safely validate `ADMIN_PLANTEL` scope.
 
 ---
 
 ### 4. `GET /api/v1/schedule/grid`
-- **Purpose**: Returns the occupancy grid of all active/approved classroom reservations (`APROBADA`, `APARTADA`, `PENDIENTE`). Used by frontend calendar widgets to render occupied schedule slots.
+- **Purpose**: Returns active confirmed reservations: an active `Evento` associated with an `APROBADA` or `APARTADA` request. Pending requests are kept in history but do not appear as confirmed public occupancy.
 - **Query Parameters**:
   - `id_salon`: Filter by room ID.
+  - `id_programa`: Filter by academic program ID.
   - `fecha` / `fecha_reserva`: Filter by specific date (`YYYY-MM-DD`).
   - `id_plantel`: Filter by campus ID.
 - **Response** (`200 OK`):
@@ -218,7 +242,7 @@ Open `booking/pruebas_manuales.http` in VS Code with the **REST Client** extensi
 ## Architecture & How It Works
 
 1. **Authentication**: Handled via JWT tokens issued by IAM. The `@login_required` decorator validates signatures with `JWT_SECRET_KEY` and injects `current_user_payload` into route handlers.
-2. **Inter-Service Communication**: Validates classroom existencia and capacity via HTTP `GET` requests to `CATALOG_SERVICE_URL/api/v1/salones/<id_salon>`.
+2. **Inter-Service Communication**: Validates classroom existence and capacity via `GET /api/v1/salones/<id_salon>`, and resolves all current or inactive Salones for `ADMIN_PLANTEL` scope through `GET /api/v1/salones?active_only=false&id_plantel=<id>`.
 3. **Database Schema**: All tables reside in PostgreSQL schema `reservas`. On service startup (`init_db`), schemas are created and default `tipo_evento` priority weights are seeded automatically.
 4. **Concurrency & Atomicity**: Database transactions perform pessimistic row-level locking (`SELECT ... FOR UPDATE`) over matching room and date rows to avoid simultaneous double booking.
 
