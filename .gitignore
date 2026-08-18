@@ -1,0 +1,5 @@
+.env
+venv/
+TODO.md
+__pycache__/
+.pytest_cache/

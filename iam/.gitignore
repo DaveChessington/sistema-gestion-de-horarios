@@ -1,0 +1,6 @@
+.env
+venv/
+TODO.md
+__pycache__/
+.vscode/
+.venv/

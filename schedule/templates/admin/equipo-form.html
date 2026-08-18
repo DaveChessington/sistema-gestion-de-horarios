@@ -1,0 +1,73 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}{{ 'Editar' if is_edit else 'Nuevo' }} equipo • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<p class="section-eyebrow text-violet-600">Inventario tecnológico</p>
+<h2 class="section-title">{{ 'Editar equipo' if is_edit else 'Nuevo equipo' }}</h2>
+<p class="section-description">{{ 'Actualiza la estación y su ubicación académica.' if is_edit else 'Captura una estación y su ubicación académica.' }}</p>
+
+{% if form_error %}
+  <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible {{ 'actualizar' if is_edit else 'registrar' }} el equipo.</p><p class="mt-1">{{ form_error }}</p></div></div>
+{% endif %}
+
+<form id="equipmentForm" method="post" action="{{ form_action }}" data-submit-progress="{{ 'Guardando...' if is_edit else 'Registrando...' }}" data-requires-salon="{{ 'true' if requires_salon else 'false' }}" class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" novalidate>
+  <div class="space-y-6">
+    <section class="form-section">
+      <div class="form-section-heading"><span class="form-section-number">1</span><div><h3>Información del equipo</h3><p>Identificador y descripción del recurso.</p></div></div>
+      <div class="mt-6 grid gap-5">
+        <label class="form-field" for="equipmentName">
+          <span>Número o identificador <strong>*</strong></span>
+          <div class="form-input-icon"><i class="fa-solid fa-computer"></i><input id="equipmentName" name="numero" type="text" value="{{ form_values.numero }}" placeholder="Ej. PC-001" autocomplete="off" required></div>
+          <small id="equipmentNameError" class="hidden text-red-600" role="alert">El número o identificador es obligatorio.</small>
+        </label>
+        <label class="form-field" for="equipmentDescription"><span>Descripción</span><textarea id="equipmentDescription" name="descripcion" class="form-textarea" placeholder="Características o uso principal del equipo">{{ form_values.descripcion }}</textarea></label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-heading"><span class="form-section-number">2</span><div><h3>Ubicación</h3><p>Asignación visual del equipo dentro de la institución.</p></div></div>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2">
+        <label class="form-field" for="equipmentPlantel">
+          <span>Plantel de referencia</span>
+          <div class="form-select"><i class="fa-solid fa-building-columns"></i><select id="equipmentPlantel" class="w-full bg-transparent text-sm outline-none"><option value="">Sin plantel</option>{% for plantel in planteles %}<option value="{{ plantel.id }}">{{ plantel.nombre }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>
+          <small>Filtro auxiliar para localizar el salón.</small>
+        </label>
+        <label class="form-field" for="equipmentSalon">
+          <span>Salón</span>
+          <div class="form-select"><i class="fa-solid fa-door-open"></i><select id="equipmentSalon" name="id_salon" data-selected-salon="{{ form_values.id_salon }}" class="w-full bg-transparent text-sm outline-none" disabled><option value="">Sin salón asignado</option></select><i class="fa-solid fa-chevron-down"></i></div>
+          <small>{{ 'Debes conservar el equipo dentro de un salón de tu plantel.' if requires_salon else 'El equipo puede permanecer sin un salón asignado.' }}</small>
+        </label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section-heading"><span class="form-section-number">3</span><div><h3>Programas asociados</h3><p>{{ 'Las asociaciones existentes no se modifican desde este formulario.' if is_edit else 'Referencia visual; la asociación se administrará posteriormente.' }}</p></div></div>
+      <div class="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+        <span class="interface-state-icon bg-white text-slate-400 shadow-sm"><i class="fa-solid fa-boxes-stacked"></i></span>
+        <p class="mt-3 text-xs font-semibold text-slate-700">Sin programas seleccionados</p>
+        <p id="equipmentProgramHint" class="mt-1 text-xs text-slate-400">{{ 'Las asociaciones actuales permanecen intactas al guardar.' if is_edit else 'Podrán asociarse desde el detalle del equipo en una integración posterior.' }}</p>
+      </div>
+    </section>
+
+    <section class="form-section"><div class="flex justify-between gap-4"><div><h3 class="text-sm font-semibold">Estado del equipo</h3><p class="mt-1 text-xs text-slate-500">{{ 'Permanece activo mientras se editan sus datos.' if is_edit else 'Se representa disponible al registrarse.' }}</p></div><span class="visual-toggle" aria-label="Estado activo"><span></span></span></div></section>
+    <div class="form-actions"><a href="{{ url_for('admin.equipos') }}" class="button-secondary">Cancelar</a><button type="submit" class="button-primary"><i class="fa-solid fa-computer"></i>{{ 'Guardar cambios' if is_edit else 'Registrar equipo' }}</button></div>
+  </div>
+
+  <aside class="space-y-5 xl:sticky xl:top-28 xl:self-start">
+    <section class="form-preview-card">
+      <p>Vista previa</p>
+      <span class="preview-large-icon bg-violet-500/20 text-violet-200"><i class="fa-solid fa-computer"></i></span>
+      <h3 id="equipmentPreviewName">Equipo pendiente</h3>
+      <small id="equipmentPreviewLocation">Sin ubicación seleccionada</small>
+      <div><span>Estado</span><strong>Activo</strong></div>
+    </section>
+    <section class="form-note"><span class="interface-state-icon bg-violet-50 text-violet-600"><i class="fa-solid fa-diagram-project"></i></span><h3>Relación de inventario</h3><p>El salón define indirectamente el plantel al que pertenece el equipo.</p></section>
+  </aside>
+</form>
+<script id="equipmentFormSalonData" type="application/json">{{ salones|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/equipo-form.js') }}"></script>
+{% endblock %}

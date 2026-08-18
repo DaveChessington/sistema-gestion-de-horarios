@@ -1,0 +1,129 @@
+services:
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: gestion_horarios_udl
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME:-gestion_horarios_udl}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-gestion_horarios_udl}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend_net
+
+  iam:
+    build:
+      context: ./iam
+      dockerfile: Dockerfile
+    container_name: iam
+    restart: always
+    ports:
+      - "${IAM_PORT:-5001}:5000"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres_db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-gestion_horarios_udl}
+      SECRET_KEY: ${SECRET_KEY:-super-secret-key-udl}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${SECRET_KEY:-super-secret-key-udl}}
+      CATALOG_API_BASE_URL: http://catalog:5002/api/v1
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    networks:
+      - backend_net
+
+  catalog:
+    build:
+      context: ./catalog
+      dockerfile: Dockerfile
+    container_name: catalog
+    restart: always
+    ports:
+      - "${CATALOG_PORT:-5002}:5002"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres_db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-gestion_horarios_udl}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${SECRET_KEY:-super-secret-key-udl}}
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    networks:
+      - backend_net
+
+  booking:
+    build:
+      context: ./booking
+      dockerfile: Dockerfile
+    container_name: booking
+    restart: always
+    ports:
+      - "${BOOKING_PORT:-5003}:5003"
+    env_file:
+      - .env
+    environment:
+      BOOKING_PORT: 5003
+      DB_HOST: postgres_db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-gestion_horarios_udl}
+      SECRET_KEY: ${SECRET_KEY:-super-secret-key-udl}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${SECRET_KEY:-super-secret-key-udl}}
+      CATALOG_SERVICE_URL: http://catalog:5002
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      catalog:
+        condition: service_started
+    networks:
+      - backend_net
+
+  schedule:
+    build:
+      context: ./schedule
+      dockerfile: Dockerfile
+    container_name: schedule
+    restart: always
+    ports:
+      - "${SCHEDULE_PORT:-5004}:5004"
+    env_file:
+      - .env
+    environment:
+      SCHEDULE_HOST: 0.0.0.0
+      SCHEDULE_PORT: 5004
+      IAM_API_BASE_URL: http://iam:5000/api/v1/auth
+      CATALOG_API_BASE_URL: http://catalog:5002/api/v1
+      BOOKING_API_BASE_URL: http://booking:5003/api/v1
+      SCHEDULE_SECRET_KEY: ${SECRET_KEY:-super-secret-key-udl}
+    depends_on:
+      - iam
+      - catalog
+      - booking
+    networks:
+      - backend_net
+
+volumes:
+  postgres_data:
+
+networks:
+  backend_net:
+    driver: bridge

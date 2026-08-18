@@ -1,0 +1,146 @@
+### Variables
+@baseUrl = http://localhost:5001/api/v1/auth
+# La variable token se extrae automáticamente si usas REST Client en VS Code
+@tokenAdmin = {{loginAdmin.response.body.token}}
+@tokenDocente = {{loginDocente.response.body.token}}
+
+### ==========================================
+### PRUEBAS DE REGISTRO (/register)
+### Ejecuta primero "Login - Administrador" para obtener tokenAdmin.
+### Si no existe un administrador, créalo previamente con el comando CLI de IAM.
+### ==========================================
+
+### 1. Registrar un Administrador (Coordinador)
+# Debería devolver 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "Admin",
+    "apellido": "Sistema",
+    "correo": "admin@udl.edu.mx",
+    "password": "password123",
+    "rol": "COORDINADOR"
+}
+
+### 2. Intentar registrar el mismo usuario
+# Debería devolver 409 Conflict (El correo ya está registrado)
+POST {{baseUrl}}/register
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "Otro",
+    "apellido": "Admin",
+    "correo": "admin@udl.edu.mx",
+    "password": "password123",
+    "rol": "COORDINADOR"
+}
+
+### 3. Registrar un Docente
+# Debería devolver 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "maestro",
+    "apellido": "docente",
+    "correo": "docente@udl.edu.mx",
+    "password": "password123",
+    "rol": "DOCENTE"
+}
+
+### REgistrar un Administrador de Plantel
+# Debería devolver 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "Encargado",
+    "apellido": "admin plantel",
+    "correo": "encargado@udl.edu.mx",
+    "password": "password123",
+    "rol": "ADMIN_PLANTEL",
+    "id_plantel_asignado": 2
+}
+
+### Registrar un Alumno
+# Debería devolver 201 Created
+POST {{baseUrl}}/register
+Content-Type: application/json
+Authorization: Bearer {{tokenAdmin}}
+
+{
+    "nombre": "estudiante",
+    "apellido": "alumno",
+    "correo": "alumno@udl.edu.mx",
+    "password": "password123",
+    "rol": "ALUMNO"
+}
+
+### ==========================================
+### PRUEBAS DE LOGIN (/login)
+### ==========================================
+
+### 4. Login - Administrador
+# Debería devolver 200 OK y el token
+# @name loginAdmin
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "admin@udl.edu.mx",
+    "password": "password123"
+}
+
+### 5. Login - Docente
+# Debería devolver 200 OK y el token
+# @name loginDocente
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "docente@udl.edu.mx",
+    "password": "password123"
+}
+
+### 6. Listar todos los usuarios (Admin)
+# Debería devolver 200 OK con el listado de usuarios
+GET {{baseUrl}}/users
+Authorization: Bearer {{tokenAdmin}}
+
+### 7. Login - Contraseña incorrecta
+# Debería devolver 401 Unauthorized
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "admin@udl.edu.mx",
+    "password": "passwordIncorrecta"
+}
+
+### ==========================================
+### PRUEBAS DE RUTAS PROTEGIDAS (/me, /admin-solo)
+### ==========================================
+
+### 7. Obtener mis datos (Con token de Admin)
+# Debería devolver 200 OK y la carga útil del token
+GET {{baseUrl}}/me
+Authorization: Bearer {{tokenAdmin}}
+
+### 8. Ruta protegida Admin - Con token de Admin
+# Debería devolver 200 OK
+GET {{baseUrl}}/admin-solo
+Authorization: Bearer {{tokenAdmin}}
+
+### 9. Ruta protegida Admin - Con token de Docente
+# Debería devolver 403 Forbidden (Acceso denegado por rol)
+GET {{baseUrl}}/admin-solo
+Authorization: Bearer {{tokenDocente}}
+
+### 10. Ruta protegida sin enviar Token
+# Debería devolver 401 Unauthorized
+GET {{baseUrl}}/me

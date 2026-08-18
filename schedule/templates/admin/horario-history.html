@@ -1,0 +1,71 @@
+{% extends "layouts/admin.html" %}
+
+{% block title %}Historial de reservas • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+<section class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Trazabilidad de Booking</p>
+    <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Historial de reservas</h2>
+    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Consulta solicitudes aprobadas, rechazadas, desplazadas o canceladas dentro del alcance de tu cuenta.</p>
+  </div>
+  <a href="{{ url_for('admin.horario_new') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200"><i class="fa-solid fa-calendar-plus"></i>Nueva reserva</a>
+</section>
+
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  {% if category in ['success', 'error'] %}
+  <div class="mt-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm {% if category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-red-200 bg-red-50 text-red-800{% endif %}" role="status">
+    <i class="fa-solid {% if category == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} mt-0.5"></i>
+    <div><p class="font-semibold">{% if category == 'success' %}Reserva actualizada.{% else %}No fue posible cancelar la reserva.{% endif %}</p><p class="mt-1">{{ message }}</p></div>
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% for service_error in service_errors %}
+  <div class="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">La consulta no pudo completarse totalmente.</p><p class="mt-1">{{ service_error }}</p></div></div>
+{% endfor %}
+
+<section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <article class="admin-stat-card"><p class="admin-stat-label">Solicitudes</p><p class="admin-stat-value">{{ history_records|length }}</p><p class="admin-stat-caption">Resultados consultados</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Aprobadas</p><p class="admin-stat-value text-emerald-700">{{ state_counts.APROBADA + state_counts.APARTADA }}</p><p class="admin-stat-caption">Con ocupación confirmada</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Rechazadas</p><p class="admin-stat-value text-red-700">{{ state_counts.RECHAZADA }}</p><p class="admin-stat-caption">Por prioridad o conflicto</p></article>
+  <article class="admin-stat-card"><p class="admin-stat-label">Sin vigencia</p><p class="admin-stat-value text-slate-600">{{ state_counts.DESPLAZADA + state_counts.CANCELADA }}</p><p class="admin-stat-caption">Desplazadas o canceladas</p></article>
+</section>
+
+<section class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <form method="get" action="{{ url_for('admin.horario_history') }}" class="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+    <label class="form-field"><span>Estado</span><div class="form-select"><i class="fa-solid fa-filter"></i><select name="estado" class="w-full bg-transparent text-sm outline-none"><option value="">Todos los estados</option>{% for value, label in [('APROBADA', 'Aprobada'), ('APARTADA', 'Apartada'), ('PENDIENTE', 'Pendiente'), ('RECHAZADA', 'Rechazada'), ('DESPLAZADA', 'Desplazada'), ('CANCELADA', 'Cancelada')] %}<option value="{{ value }}"{% if filter_values.estado == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div></label>
+    <label class="form-field"><span>Salón</span><div class="form-select"><i class="fa-solid fa-door-open"></i><select name="id_salon" class="w-full bg-transparent text-sm outline-none"><option value="">Todos los salones</option>{% for salon in salones %}<option value="{{ salon.id_salon }}"{% if filter_values.id_salon == salon.id_salon|string %} selected{% endif %}>{{ salon.numero }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div></label>
+    <label class="form-field"><span>Fecha</span><div class="form-input-icon"><i class="fa-regular fa-calendar"></i><input name="fecha_reserva" type="date" value="{{ filter_values.fecha_reserva }}" /></div></label>
+    <label class="form-field"><span>Usuario ID</span><div class="form-input-icon"><i class="fa-regular fa-user"></i><input name="id_usuario" type="number" min="1" value="{{ filter_values.id_usuario }}" placeholder="Todos" /></div></label>
+    <div class="flex items-end gap-2"><button type="submit" class="button-primary min-h-[46px] flex-1 justify-center"><i class="fa-solid fa-magnifying-glass"></i>Consultar</button>{% if filter_values.estado or filter_values.id_salon or filter_values.fecha_reserva or filter_values.id_usuario %}<a href="{{ url_for('admin.horario_history') }}" class="button-secondary min-h-[46px] px-4" aria-label="Limpiar filtros"><i class="fa-solid fa-xmark"></i></a>{% endif %}</div>
+  </form>
+
+  <div class="border-b border-slate-100 p-4 sm:p-5">
+    <div class="relative w-full sm:max-w-md"><i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i><input id="historySearch" type="search" aria-label="Buscar en resultados" placeholder="Buscar actividad, salón, estado o solicitud" class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none placeholder:text-slate-400" /></div>
+  </div>
+
+  <div class="hidden overflow-x-auto lg:block">
+    <table class="w-full min-w-[1080px] text-left">
+      <thead class="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"><tr><th class="px-6 py-4">Solicitud</th><th class="px-6 py-4">Actividad</th><th class="px-6 py-4">Espacio</th><th class="px-6 py-4">Fecha y bloque</th><th class="px-6 py-4">Solicitante</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-right">Acciones</th></tr></thead>
+      <tbody id="historyTableBody" class="divide-y divide-slate-100"></tbody>
+    </table>
+  </div>
+  <div id="historyMobileGrid" class="grid gap-4 p-4 lg:hidden"></div>
+
+  <div class="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <p id="historyResultCount" class="text-xs text-slate-500">Preparando historial...</p>
+    <nav class="flex gap-1" aria-label="Paginación del historial"><button id="historyPreviousPage" type="button" class="pagination-button" aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></button><button id="historyCurrentPage" type="button" class="pagination-button pagination-button-active" aria-current="page">1</button><button id="historyNextPage" type="button" class="pagination-button" aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button></nav>
+  </div>
+</section>
+
+<p class="mt-4 flex gap-2 text-xs leading-5 text-slate-400"><i class="fa-solid fa-circle-info mt-0.5"></i>El historial y las cancelaciones se procesan mediante Booking. Los permisos se validan nuevamente con el rol y el plantel de la sesión.</p>
+<script id="bookingHistoryData" type="application/json">{{ history_records|tojson }}</script>
+<script id="historySalonData" type="application/json">{{ salones|tojson }}</script>
+<script id="historyPlantelData" type="application/json">{{ planteles|tojson }}</script>
+<script id="historyConfigData" type="application/json">{{ {'cancel_url_template': url_for('admin.horario_cancel', id_peticion=0), 'edit_url_template': url_for('admin.horario_edit', id_peticion=0)}|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/horario-history.js') }}"></script>
+{% endblock %}

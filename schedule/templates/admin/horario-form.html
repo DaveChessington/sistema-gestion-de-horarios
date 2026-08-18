@@ -1,0 +1,95 @@
+{% extends "layouts/admin.html" %}
+
+{% set editing = form_mode|default('create') == 'edit' %}
+{% block title %}{{ 'Editar reserva' if editing else 'Nueva reserva' }} • Gestión de horarios{% endblock %}
+
+{% block admin_content %}
+  <p class="section-eyebrow text-blue-600">Planeación académica</p>
+  <h2 class="section-title">{{ 'Editar reserva' if editing else 'Nueva reserva' }}</h2>
+  <p class="section-description">{% if editing %}Reprograma la reserva conservando las validaciones de capacidad, prioridad y colisiones.{% else %}Registra una solicitud administrativa usando los espacios activos y los bloques institucionales de 50 minutos.{% endif %}</p>
+
+  {% if form_error %}
+    <div class="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><p class="font-semibold">No fue posible completar la solicitud.</p><p class="mt-1">{{ form_error }}</p></div></div>
+  {% endif %}
+
+  <form id="scheduleForm" method="post" action="{{ form_action|default(url_for('admin.horario_new')) }}" class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]" novalidate>
+    <div class="space-y-6">
+      <section class="form-section">
+        <div class="form-section-heading"><span class="form-section-number">1</span><div><h3>Ubicación</h3><p>Selecciona el plantel y uno de sus salones activos.</p></div></div>
+        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+          <label class="form-field">
+            <span>Plantel <strong>*</strong></span>
+            <div class="form-select"><i class="fa-solid fa-building-columns"></i><select id="schedulePlantel" name="id_plantel" class="w-full bg-transparent text-sm outline-none" required><option value="">Seleccionar plantel</option>{% for plantel in planteles %}<option value="{{ plantel.id }}"{% if form_values.id_plantel == plantel.id|string %} selected{% endif %}>{{ plantel.nombre }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>
+            <small id="schedulePlantelError" class="hidden text-red-600">Selecciona un plantel activo.</small>
+          </label>
+          <label class="form-field">
+            <span>Salón <strong>*</strong></span>
+            <div class="form-select"><i class="fa-solid fa-door-open"></i><select id="scheduleSalon" name="id_salon" data-selected-salon="{{ form_values.id_salon }}" class="w-full bg-transparent text-sm outline-none" required><option value="">Seleccionar salón</option></select><i class="fa-solid fa-chevron-down"></i></div>
+            <small id="scheduleSalonError" class="hidden text-red-600">Selecciona un salón activo del plantel.</small>
+          </label>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-heading"><span class="form-section-number">2</span><div><h3>Fecha y bloque</h3><p>La reserva ocupará exactamente uno de los intervalos configurados.</p></div></div>
+        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+          <label class="form-field">
+            <span>Fecha <strong>*</strong></span>
+            <div class="form-input-icon"><i class="fa-regular fa-calendar"></i><input id="scheduleDate" name="fecha_reserva" type="date" value="{{ form_values.fecha_reserva }}" required /></div>
+            <small id="scheduleDateError" class="hidden text-red-600">Selecciona una fecha válida.</small>
+          </label>
+          <label class="form-field">
+            <span>Bloque de 50 minutos <strong>*</strong></span>
+            <div class="form-select"><i class="fa-regular fa-clock"></i><select id="scheduleSlot" name="bloque" class="w-full bg-transparent text-sm outline-none" required><option value="">Seleccionar bloque</option><optgroup label="Turno Matutino">{% for value, label, period in booking_slots if period == 'Turno Matutino' %}<option value="{{ value }}"{% if form_values.bloque == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</optgroup><optgroup label="Turno Vespertino">{% for value, label, period in booking_slots if period == 'Turno Vespertino' %}<option value="{{ value }}"{% if form_values.bloque == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</optgroup></select><i class="fa-solid fa-chevron-down"></i></div>
+            <small id="scheduleSlotError" class="hidden text-red-600">Selecciona un bloque institucional.</small>
+          </label>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-heading"><span class="form-section-number">3</span><div><h3>Información académica</h3><p>Datos usados por Booking para registrar y priorizar la solicitud.</p></div></div>
+        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+          <label class="form-field">
+            <span>Tipo de evento <strong>*</strong></span>
+            <div class="form-select"><i class="fa-solid fa-layer-group"></i><select id="scheduleEventType" name="id_tipo_evento" class="w-full bg-transparent text-sm outline-none" required><option value="">Seleccionar tipo</option>{% for event_type in event_types %}<option value="{{ event_type.id }}"{% if form_values.id_tipo_evento == event_type.id|string %} selected{% endif %}>{{ event_type.name }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>
+            <small id="scheduleEventTypeError" class="hidden text-red-600">Selecciona un tipo de evento.</small>
+          </label>
+          <label class="form-field">
+            <span>Programa</span>
+            <div class="form-select"><i class="fa-solid fa-boxes-stacked"></i><select id="scheduleProgram" name="id_programa" class="w-full bg-transparent text-sm outline-none"><option value="">Sin programa asignado</option>{% for programa in programas %}<option value="{{ programa.id_programa }}"{% if form_values.id_programa == programa.id_programa|string %} selected{% endif %}>{{ programa.nombre }}</option>{% endfor %}</select><i class="fa-solid fa-chevron-down"></i></div>
+          </label>
+          <label class="form-field">
+            <span>Materia o actividad</span>
+            <div class="form-input-icon"><i class="fa-solid fa-book-open"></i><input id="scheduleSubject" name="materia_nombre" type="text" maxlength="150" value="{{ form_values.materia_nombre }}" placeholder="Ej. Bases de Datos" /></div>
+          </label>
+          <label class="form-field">
+            <span>Número de alumnos</span>
+            <div class="form-input-icon"><i class="fa-solid fa-users"></i><input id="scheduleStudents" name="numero_alumnos" type="number" min="1" value="{{ form_values.numero_alumnos }}" placeholder="Ej. 25" /></div>
+            <small id="scheduleStudentsError" class="hidden text-red-600">La cantidad debe ser válida para la capacidad del salón.</small>
+          </label>
+          <label class="form-field sm:col-span-2"><span>Observaciones</span><textarea id="scheduleNotes" name="observaciones" class="form-textarea" maxlength="500" placeholder="Requerimientos o contexto de la reserva">{{ form_values.observaciones }}</textarea></label>
+        </div>
+      </section>
+
+      <div class="form-actions"><a href="{{ url_for('admin.horario_history') if editing else url_for('admin.horarios') }}" class="button-secondary">Cancelar</a><button type="submit" class="button-primary"><i class="fa-solid {{ 'fa-calendar-check' if editing else 'fa-calendar-plus' }}"></i>{{ 'Guardar reprogramación' if editing else 'Enviar solicitud' }}</button></div>
+    </div>
+
+    <aside class="space-y-5 xl:sticky xl:top-28 xl:self-start">
+      <section class="form-preview-card">
+        <p>Resumen de reserva</p>
+        <span class="preview-large-icon bg-blue-500/20 text-blue-200"><i class="fa-solid fa-calendar-check"></i></span>
+        <h3 id="schedulePreviewSubject">Actividad pendiente</h3>
+        <small id="schedulePreviewLocation">Ubicación sin seleccionar</small>
+        <div><span>Fecha y horario</span><strong id="schedulePreviewTime">Pendiente</strong></div>
+        <div><span>Capacidad</span><strong id="schedulePreviewCapacity">— personas</strong></div>
+      </section>
+      <section class="form-note"><span class="interface-state-icon bg-amber-50 text-amber-600"><i class="fa-solid fa-scale-balanced"></i></span><h3>Prioridad automática</h3><p>Booking calculará la prioridad según el rol de la sesión y el tipo de evento. Una colisión puede aprobar, desplazar o rechazar la solicitud.</p></section>
+      <section class="form-note"><span class="interface-state-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-shield-halved"></i></span><h3>Sesión protegida</h3><p>El JWT de IAM se envía desde el servidor y nunca se expone en este formulario.</p></section>
+    </aside>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script id="scheduleSalonData" type="application/json">{{ salones|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/horario-form.js') }}"></script>
+{% endblock %}

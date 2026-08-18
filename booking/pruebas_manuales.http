@@ -1,0 +1,224 @@
+### Variables de Prueba
+@baseUrl = http://localhost:5003/api/v1
+@catalogUrl = http://localhost:5002/api/v1
+@authUrl = http://localhost:5001/api/v1/auth
+
+# Tokens obtenidos llamando al servicio IAM
+@adminToken = {{loginAdmin.response.body.token}}
+@encargadoToken = {{loginEncargado.response.body.token}}
+@docenteToken = {{loginDocente.response.body.token}}
+@alumnoToken = {{loginAlumno.response.body.token}}
+
+### ==========================================
+### 1. OBTENER TOKENS (IAM)
+### ==========================================
+
+### Login - Administrador
+# @name loginAdmin
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "admin@udl.edu.mx",
+    "password": "password123"
+}
+
+### Login - Encargado
+# @name loginEncargado
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "encargado@udl.edu.mx",
+    "password": "password123"
+}
+
+### Login - Docente
+# @name loginDocente
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "docente@udl.edu.mx",
+    "password": "password123"
+}
+
+### Login - Alumno
+# @name loginAlumno
+POST {{authUrl}}/login
+Content-Type: application/json
+
+{
+    "correo": "alumno@udl.edu.mx",
+    "password": "password123"
+}
+
+### ==========================================
+### 2. SOLICITUD DE RESERVA CON SALÓN ESPECÍFICO
+### ==========================================
+
+### 2.1 Reserva Exitosa con Salón Específico (Docente, Bloque 08:00 - 10:00, P = 90)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{docenteToken}}
+Content-Type: application/json
+
+{
+  "id_salon": 1,
+  "id_programa": 1,
+  "materia_nombre": "Base de Datos Avanzada",
+  "fecha_reserva": "2026-09-15",
+  "hora_inicio": "08:00",
+  "hora_fin": "10:00",
+  "id_tipo_evento": 1,
+  "numero_alumnos": 25,
+  "observaciones": "Requiere proyector y red empresarial"
+}
+
+### 2.2 Reserva Exitosa en Horario Consecutivo / Seguido (Mismo Salón 1, Bloque 10:00 - 12:00 -> APROBADA 201)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{docenteToken}}
+Content-Type: application/json
+
+{
+  "id_salon": 1,
+  "id_programa": 1,
+  "materia_nombre": "Redes de Computadoras",
+  "fecha_reserva": "2026-09-15",
+  "hora_inicio": "10:00",
+  "hora_fin": "12:00",
+  "id_tipo_evento": 1,
+  "numero_alumnos": 25,
+  "observaciones": "Clase consecutiva sin traslape"
+}
+
+### ==========================================
+### 3. AUTO-ASIGNACIÓN AUTOMÁTICA DE SALÓN (OMITIENDO id_salon)
+### ==========================================
+
+### 3.1 Solicitud con Omisión del campo id_salon (Auto-asignación basada en numero_alumnos)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{docenteToken}}
+Content-Type: application/json
+
+{
+  "materia_nombre": "Inteligencia Artificial",
+  "fecha_reserva": "2026-09-15",
+  "hora_inicio": "12:00",
+  "hora_fin": "14:00",
+  "id_tipo_evento": 1,
+  "numero_alumnos": 30,
+  "observaciones": "Asignación automática de salón adecuado"
+}
+
+### ==========================================
+### 4. VALIDACIÓN DE CAPACIDAD DEL SALÓN
+### ==========================================
+
+### 4.1 Rechazo por Capacidad Insuficiente en Salón Específico (Debe retornar HTTP 400 Bad Request)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{docenteToken}}
+Content-Type: application/json
+
+{
+  "id_salon": 1,
+  "materia_nombre": "Seminario Masivo",
+  "fecha_reserva": "2026-09-16",
+  "hora_inicio": "08:00",
+  "hora_fin": "10:00",
+  "id_tipo_evento": 1,
+  "numero_alumnos": 500,
+  "observaciones": "Excede la capacidad del salón 1"
+}
+
+### 4.2 Rechazo en Auto-asignación sin Salones Aptos para la Capacidad (Debe retornar HTTP 400 Bad Request)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{docenteToken}}
+Content-Type: application/json
+
+{
+  "materia_nombre": "Mega Evento Estudiantil",
+  "fecha_reserva": "2026-09-16",
+  "hora_inicio": "12:00",
+  "hora_fin": "14:00",
+  "id_tipo_evento": 2,
+  "numero_alumnos": 9999,
+  "observaciones": "Ningún salón disponible soporta este número de alumnos"
+}
+
+### ==========================================
+### 5. TRASLAPES Y COLISIONES POR PRIORIDAD
+### ==========================================
+
+### 5.1 Traslape Parcial con Menor Prioridad (Alumno intenta apartar 09:30 - 11:00 compitiendo contra Docente 08:00-10:00, P=20)
+# Debe retornar HTTP 409 Conflict (Rechazada por regla FIFO)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{alumnoToken}}
+Content-Type: application/json
+
+{
+  "id_salon": 1,
+  "materia_nombre": "Estudio Grupal Examen",
+  "fecha_reserva": "2026-09-15",
+  "hora_inicio": "09:30",
+  "hora_fin": "11:00",
+  "id_tipo_evento": 4,
+  "numero_alumnos": 5,
+  "observaciones": "Estudio de algoritmos (traslape parcial 09:30-10:00)"
+}
+
+### 5.2 Alumno Aparta Bloque Extenso (08:00 - 12:00 en Salón 2, P = 20)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{alumnoToken}}
+Content-Type: application/json
+
+{
+  "id_salon": 2,
+  "materia_nombre": "Taller de Proyectos de Estudio",
+  "fecha_reserva": "2026-09-20",
+  "hora_inicio": "08:00",
+  "hora_fin": "12:00",
+  "id_tipo_evento": 4,
+  "numero_alumnos": 10,
+  "observaciones": "Apartado largo de alumno"
+}
+
+### 5.3 Traslape Totalmente Contenido con Mayor Prioridad (Docente aparta 09:00 - 11:00 dentro de 08:00 - 12:00, P = 90)
+# Debe retornar HTTP 201 Created (Desplaza la reserva previa del Alumno)
+POST {{baseUrl}}/booking/request
+Authorization: Bearer {{docenteToken}}
+Content-Type: application/json
+
+{
+  "id_salon": 2,
+  "id_programa": 1,
+  "materia_nombre": "Arquitectura de Software",
+  "fecha_reserva": "2026-09-20",
+  "hora_inicio": "09:00",
+  "hora_fin": "11:00",
+  "id_tipo_evento": 1,
+  "numero_alumnos": 20,
+  "observaciones": "Clase prioritaria desplaza reserva contenida de alumno"
+}
+
+### ==========================================
+### 6. HISTORIAL Y CANCELACIÓN
+### ==========================================
+
+### 6.1 Consultar Historial de Reservas del Usuario Autenticado
+GET {{baseUrl}}/booking/history
+Authorization: Bearer {{docenteToken}}
+
+### 6.2 Consultar Historial Filtrado por Estado (APROBADA) y Salón
+GET {{baseUrl}}/booking/history?estado=APROBADA&id_salon=1
+Authorization: Bearer {{adminToken}}
+
+### 6.3 Cancelar una Reserva Liberando el Espacio en Base de Datos (DELETE)
+DELETE {{baseUrl}}/booking/request/1
+Authorization: Bearer {{docenteToken}}
+
+### ==========================================
+### 7. MATRIZ DE HORARIOS (SCHEDULE GRID)
+### ==========================================
+
+### 7.1 Consultar Cuadrícula de Horarios Ocupados (Grid Schedule)
+GET {{baseUrl}}/schedule/grid?fecha_reserva=2026-09-15&id_salon=1
